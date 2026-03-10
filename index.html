@@ -827,7 +827,7 @@ body {
 
     <div class="field">
       <label>JSONを貼り付け</label>
-      <textarea id="importJson" placeholder='[{"title":"...","type":"must","prio":"high",...}]' style="min-height:120px;font-family:DM Mono,monospace;font-size:12px"></textarea>
+      <textarea id="importJson" placeholder='[{"title":"...","type":"must","prio":"high",...}]' style="min-height:120px;font-family:DM Mono,monospace;font-size:12px" autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"></textarea>
     </div>
     <button class="btn-primary" onclick="doImport()">↓ インポートする</button>
     <button class="btn-secondary" onclick="closeModal('importModal')">キャンセル</button>
@@ -1182,12 +1182,19 @@ function copyPrompt() {
 function doImport() {
   let raw = document.getElementById('importJson').value;
   if(!raw.trim()){toast('JSONを貼り付けてください');return;}
-  // 見えない文字・BOM・コードブロックなどを除去
+  // あらゆる問題文字を除去・正規化
   raw = raw
-    .replace(/^\uFEFF/,'')
+    .replace(/\uFEFF/g,'')
     .replace(/```json|```/g,'')
-    .replace(/[\u200B-\u200D\uFEFF]/g,'')
+    .replace(/[\u200B-\u200D]/g,'')
     .replace(/\u3000/g,' ')
+    // iPhoneの自動変換でよく起きる全角・特殊クォートをすべて半角に
+    .replace(/[\u201C\u201D\u201E\u201F\u02BA\uFF02\u275D\u275E]/g,'"')
+    .replace(/[\u2018\u2019\u201A\u201B\u02B9\uFF07\u275B\u275C]/g,"'")
+    // 全角括弧
+    .replace(/\uFF3B/g,'[').replace(/\uFF3D/g,']')
+    .replace(/\uFF5B/g,'{').replace(/\uFF5D/g,'}')
+    .replace(/\uFF0C/g,',').replace(/\uFF1A/g,':')
     .trim();
   // [ ... ] の範囲だけ切り出す
   const start = raw.indexOf('[');
@@ -1203,7 +1210,7 @@ function doImport() {
     closeModal('importModal');
     toast('✓ ' + parsed.length + '件インポートしました');
   } catch(e) {
-    alert('JSONの読み込みに失敗しました。\nClaudeが出力したJSON全体をそのままコピーして貼り付けてください。\n\nエラー: ' + e.message);
+    alert('JSONの読み込みに失敗しました。\n\nエラー: ' + e.message + '\n\n貼り付けた内容の先頭5文字: ' + raw.slice(0,5).split('').map(c=>c.charCodeAt(0).toString(16)).join(' '));
   }
 }
 
