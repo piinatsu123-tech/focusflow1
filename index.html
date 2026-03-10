@@ -829,6 +829,7 @@ body {
       <label>JSONを貼り付け</label>
       <textarea id="importJson" placeholder='[{"title":"...","type":"must","prio":"high",...}]' style="min-height:120px;font-family:DM Mono,monospace;font-size:12px" autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"></textarea>
     </div>
+    <button class="copy-prompt-btn" onclick="pasteFromClipboard()">📋 クリップボードから貼り付け</button>
     <button class="btn-primary" onclick="doImport()">↓ インポートする</button>
     <button class="btn-secondary" onclick="closeModal('importModal')">キャンセル</button>
   </div>
@@ -1179,6 +1180,16 @@ function openImport() {
 function copyPrompt() {
   navigator.clipboard.writeText(PROMPT_TEMPLATE).then(()=>toast('📋 プロンプトをコピーしました'));
 }
+async function pasteFromClipboard() {
+  try {
+    const text = await navigator.clipboard.readText();
+    document.getElementById('importJson').value = text;
+    toast('📋 貼り付けました');
+  } catch(e) {
+    toast('⚠ クリップボードへのアクセスを許可してください');
+  }
+}
+
 function doImport() {
   let raw = document.getElementById('importJson').value;
   if(!raw.trim()){toast('JSONを貼り付けてください');return;}
@@ -1238,6 +1249,26 @@ if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch
 // ═══════════════════════════════════════
 updateTimerUI();
 render();
+
+// URLパラメータからJSONを自動インポート（ショートカット連携用）
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const json = params.get('import');
+  if(json) {
+    try {
+      const parsed = JSON.parse(decodeURIComponent(json));
+      if(Array.isArray(parsed)) {
+        parsed.forEach(t=>{
+          const steps=(t.steps||[]).map(s=>typeof s==='string'?{title:s,done:false}:s);
+          addTask({...t,steps,done:false});
+        });
+        toast('✓ ' + parsed.length + '件を自動インポートしました');
+        // URLをきれいにする
+        history.replaceState(null,'',window.location.pathname);
+      }
+    } catch(e) {}
+  }
+})();
 </script>
 </body>
 </html>
