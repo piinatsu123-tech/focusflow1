@@ -184,6 +184,44 @@ body {
   color: var(--text3);
   text-transform: uppercase;
   margin: 16px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-hd::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* 期限強調バッジ */
+.dl-big {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 6px;
+}
+.dl-big-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1;
+}
+.dl-big-unit { font-size: 11px; color: var(--text2); }
+.dl-big-label { font-size: 10px; color: var(--text2); margin-left: 2px; }
+
+/* 優先度によるカード色 */
+.task-row.prio-high-row {
+  border-color: rgba(255,87,87,.2);
+  background: linear-gradient(135deg, #1a1014, #13131e);
+}
+.task-row.prio-high-row .prio-bar { width: 4px; }
+.task-row.prio-mid-row {
+  border-color: rgba(255,170,0,.15);
+}
+.task-row.overdue-row {
+  border-color: rgba(255,87,87,.4);
+  background: linear-gradient(135deg,#1e1010,#13131e);
+}
+.task-row.today-row {
+  border-color: rgba(255,170,0,.3);
+  background: linear-gradient(135deg,#1a1608,#13131e);
 }
 
 .task-row {
@@ -278,6 +316,38 @@ body {
   border-color: var(--text3);
   color: var(--bg);
 }
+
+/* FILTER CHIPS */
+.filter-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0 18px 10px;
+  flex-shrink: 0;
+}
+.filter-row::-webkit-scrollbar { display: none; }
+.fchip {
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  background: none;
+  color: var(--text2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.fchip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.fchip.today.active { background: var(--want); border-color: var(--want); }
+.fchip.over.active  { background: var(--must); border-color: var(--must); }
 
 /* FAB */
 .fab-row {
@@ -708,6 +778,15 @@ body {
   <!-- focused task -->
   <div id="focusCardWrap"></div>
 
+  <!-- filter chips -->
+  <div class="filter-row">
+    <button class="fchip active" onclick="setViewFilter('all',this)">すべて</button>
+    <button class="fchip today" onclick="setViewFilter('today',this)">今日</button>
+    <button class="fchip" onclick="setViewFilter('week',this)">今週</button>
+    <button class="fchip over" onclick="setViewFilter('overdue',this)">⚠ 期限切れ</button>
+    <button class="fchip" onclick="setViewFilter('done',this)">完了済み</button>
+  </div>
+
   <!-- task list -->
   <div class="task-scroll" id="taskScroll"></div>
 
@@ -842,7 +921,8 @@ body {
 //  STATE
 // ═══════════════════════════════════════
 let tasks   = JSON.parse(localStorage.getItem('ff-tasks') || '[]');
-let selId   = null;   // selected/focused task id
+let selId      = null;   // selected/focused task id
+let viewFilter = 'all';  // 'all' | 'today' | 'week' | 'overdue' | 'done' 
 let stepIdx = 0;      // current step index in focus mode
 
 // timer
@@ -858,6 +938,13 @@ const uid  = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6)
 const save = () => localStorage.setItem('ff-tasks', JSON.stringify(tasks));
 const esc  = s => String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const today0 = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
+
+function setViewFilter(f, el) {
+  viewFilter = f;
+  document.querySelectorAll('.fchip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
 
 // ═══════════════════════════════════════
 //  TOAST
@@ -945,36 +1032,105 @@ function render() {
     return;
   }
 
+  // viewFilterで絞り込み
+  const now7 = new Date(td.getTime() + 7*86400000);
+  const isToday  = t => t.deadline && (() => { const d=new Date(t.deadline); return d>=td && d<new Date(td.getTime()+86400000); })();
+  const isOver   = t => t.deadline && new Date(t.deadline) < td;
+  const isWeek   = t => t.deadline && (() => { const d=new Date(t.deadline); return d>=new Date(td.getTime()+86400000) && d<now7; })();
+
+  let filteredActive = active;
+  let filteredDone   = done;
+  if(viewFilter === 'today')   { filteredActive = active.filter(t => isToday(t) || isOver(t)); filteredDone = []; }
+  if(viewFilter === 'week')    { filteredActive = active.filter(t => isToday(t) || isOver(t) || isWeek(t)); filteredDone = []; }
+  if(viewFilter === 'overdue') { filteredActive = active.filter(t => isOver(t)); filteredDone = []; }
+  if(viewFilter === 'done')    { filteredActive = []; filteredDone = done; }
+
+  // 空の場合
+  if(!filteredActive.length && !filteredDone.length) {
+    const emptyMsg = {
+      today:   '今日期限のタスクはありません',
+      week:    '今週期限のタスクはありません',
+      overdue: '期限切れのタスクはありません',
+      done:    '完了済みのタスクはありません',
+    };
+    scroll.innerHTML = `<div class="all-done"><span class="big">${viewFilter==='done'?'✅':'🎉'}</span><p>${emptyMsg[viewFilter]||'タスクがありません'}</p></div>`;
+    return;
+  }
+
   let html = '';
-  if(active.length) {
-    active.forEach(t=>{
-      html += taskRowHTML(t);
+  if(viewFilter === 'all') {
+    const overdue2  = filteredActive.filter(t => isOver(t));
+    const todayT    = filteredActive.filter(t => isToday(t));
+    const thisWeek  = filteredActive.filter(t => isWeek(t));
+    const later     = filteredActive.filter(t => !isOver(t) && !isToday(t) && !isWeek(t));
+    if(overdue2.length)  { html += `<div class="section-hd">⚠ 期限切れ</div>`; overdue2.forEach(t=>{ html += taskRowHTML(t,'overdue'); }); }
+    if(todayT.length)    { html += `<div class="section-hd">今日</div>`; todayT.forEach(t=>{ html += taskRowHTML(t,'today'); }); }
+    if(thisWeek.length)  { html += `<div class="section-hd">今週</div>`; thisWeek.forEach(t=>{ html += taskRowHTML(t,''); }); }
+    if(later.length)     { html += `<div class="section-hd">それ以降・期限なし</div>`; later.forEach(t=>{ html += taskRowHTML(t,''); }); }
+  } else {
+    filteredActive.forEach(t => {
+      const grp = isOver(t)?'overdue':isToday(t)?'today':'';
+      html += taskRowHTML(t, grp);
     });
   }
-  if(done.length) {
-    html += `<div class="section-hd">完了済み</div>`;
-    done.forEach(t=>{ html += taskRowHTML(t); });
-  }
+  if(filteredDone.length) { html += `<div class="section-hd">完了済み</div>`; filteredDone.forEach(t=>{ html += taskRowHTML(t,'done'); }); }
   scroll.innerHTML = html;
 }
 
-function taskRowHTML(t) {
+function taskRowHTML(t, group) {
   const TL={must:'やるべき',want:'やりたい',idea:'アイデア'};
   const hasSteps=t.steps&&t.steps.length;
   const doneSteps=hasSteps?t.steps.filter(s=>s.done).length:0;
   const isSel = t.id===selId && !t.done;
-  return `<div class="task-row ${t.done?'done-row':''} ${isSel?'selected':''}" onclick="selectTask('${t.id}')">
+  // カード色クラス
+  let rowCls = t.done ? 'done-row' : '';
+  if(!t.done) {
+    if(group==='overdue') rowCls += ' overdue-row';
+    else if(group==='today') rowCls += ' today-row';
+    else if(t.prio==='high') rowCls += ' prio-high-row';
+    else if(t.prio==='mid')  rowCls += ' prio-mid-row';
+  }
+  if(isSel) rowCls += ' selected';
+  return `<div class="task-row ${rowCls}" onclick="selectTask('${t.id}')">
     <div class="prio-bar pb-${t.prio}"></div>
     <div class="task-row-body">
       <div class="task-row-title">${esc(t.title)}</div>
       <div class="task-row-meta">
         <span class="tag tag-${t.type}">${TL[t.type]||''}</span>
         ${t.category?`<span class="tag tag-cat">${esc(t.category)}</span>`:''}
-        ${dlBadge(t)}
       </div>
+      ${dlBigBadge(t)}
       ${hasSteps?`<div class="step-mini"><div class="step-mini-bar" style="width:${Math.round(doneSteps/t.steps.length*100)}%"></div></div>`:''}
     </div>
     <button class="check-btn" onclick="event.stopPropagation();toggleDone('${t.id}')">${t.done?'✓':''}</button>
+  </div>`;
+}
+
+function dlBigBadge(t) {
+  if(!t.deadline) return '';
+  const td=today0(), due=new Date(t.deadline);
+  const diff=Math.ceil((due-td)/86400000);
+  const hasTime = t.deadline.includes('T');
+  const timeStr = hasTime ? due.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) : '';
+
+  let numStr, unitStr, labelStr, color;
+  if(diff < 0) {
+    numStr = Math.abs(diff); unitStr = '日'; labelStr = '超過'; color = 'var(--must)';
+  } else if(diff === 0) {
+    if(hasTime) { numStr = timeStr; unitStr = ''; labelStr = '今日まで'; color = 'var(--want)'; }
+    else { numStr = '今日'; unitStr = ''; labelStr = 'が期限'; color = 'var(--want)'; }
+  } else if(diff === 1) {
+    numStr = '明日'; unitStr = ''; labelStr = timeStr?timeStr+'まで':'が期限'; color = 'var(--want)';
+  } else if(diff <= 7) {
+    numStr = diff; unitStr = '日後'; labelStr = timeStr?timeStr+'まで':''; color = 'var(--text2)';
+  } else {
+    const dateStr = due.toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'});
+    numStr = dateStr; unitStr = ''; labelStr = timeStr||''; color = 'var(--text3)';
+  }
+  return `<div class="dl-big">
+    <span class="dl-big-num" style="color:${color}">${numStr}</span>
+    ${unitStr?`<span class="dl-big-unit">${unitStr}</span>`:''}
+    ${labelStr?`<span class="dl-big-label">${labelStr}</span>`:''}
   </div>`;
 }
 
