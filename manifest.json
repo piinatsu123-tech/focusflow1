@@ -4,8 +4,8 @@
   "description": "優先度順タスク管理＋集中モード",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0a0a0f",
-  "theme_color": "#0a0a0f",
+  "background_color": "#FAFAF8",
+  "theme_color": "#FAFAF8",
   "orientation": "portrait-primary",
   "icons": [
     {"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
