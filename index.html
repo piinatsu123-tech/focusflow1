@@ -1284,7 +1284,10 @@ renderGroups();
         toast('✓ ' + parsed.length + '件を自動インポートしました');
         history.replaceState(null, '', window.location.pathname);
       }
-    } catch(e) {}
+    } catch(e) {
+      history.replaceState(null, '', window.location.pathname);
+      alert('インポートに失敗しました。\nURLのJSONが正しくない可能性があります。\n\nエラー: ' + e.message);
+    }
   }
 })();
 </script>
