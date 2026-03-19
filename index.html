@@ -37,17 +37,21 @@ body {
 .screen {
   position: fixed;
   inset: 0;
-  display: flex;
+  display: none;
   flex-direction: column;
   background: var(--bg);
-  transform: translateX(100%);
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform;
 }
-#screen-main  { z-index: 10; transform: none; }
+#screen-main  { display: flex; z-index: 10; }
 #screen-group { z-index: 20; }
 #screen-focus { z-index: 30; }
-.screen.visible { transform: translateX(0); }
+.screen.visible { display: flex; }
+
+@keyframes slideInRight {
+  from { transform: translateX(28px); opacity: 0; }
+  to   { transform: none;             opacity: 1; }
+}
+#screen-group.visible,
+#screen-focus.visible { animation: slideInRight 0.22s ease-out; }
 
 /* ── BACK BUTTON / HEADER ── */
 .screen-header {
