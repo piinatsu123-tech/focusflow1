@@ -576,22 +576,12 @@ renderMain();
 // URLパラメータからの自動インポート
 (function() {
   const params = new URLSearchParams(window.location.search);
-  const raw = params.get('import');
-  if (!raw) return;
+  const importData = params.get('import');
+  if (!importData) return;
 
-  // Step1: URLデコード（URLSearchParams.get()は1段階しかデコードしないため明示的にデコード）
-  let jsonStr;
   try {
-    jsonStr = decodeURIComponent(raw);
-  } catch(e) {
-    history.replaceState(null, '', window.location.pathname);
-    alert('インポートに失敗しました。\nURLエンコードが正しくありません。\n\nエラー: ' + e.message);
-    return;
-  }
-
-  // Step2: JSONパース
-  try {
-    const parsed = JSON.parse(jsonStr);
+    const decoded = decodeURIComponent(importData);
+    const parsed  = JSON.parse(decoded);
     if (!Array.isArray(parsed)) throw new Error('JSONは配列形式である必要があります');
 
     const urgencyMap = { must: 'must', want: 'want', idea: 'nice' };
@@ -605,7 +595,7 @@ renderMain();
     history.replaceState(null, '', window.location.pathname);
   } catch(e) {
     history.replaceState(null, '', window.location.pathname);
-    alert('インポートに失敗しました。\nJSONの形式が正しくありません。\n\nエラー: ' + e.message);
+    alert('インポートに失敗しました: ' + e.message);
   }
 })();
 </script>
