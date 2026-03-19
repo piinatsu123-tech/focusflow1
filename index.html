@@ -265,6 +265,21 @@ body {
 }
 .btn-complete:active { opacity: 0.7; }
 
+/* ── IMPORT BUTTON ── */
+.import-wrap {
+  padding: 8px 20px 40px;
+  display: flex; justify-content: center;
+}
+.import-btn {
+  height: 44px; padding: 0 24px;
+  background: none; border: 1.5px solid var(--border-strong);
+  border-radius: 50px; cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px; font-weight: 500; color: var(--text2);
+  transition: opacity 0.15s;
+}
+.import-btn:active { opacity: 0.6; }
+
 /* ── TOAST ── */
 .toast {
   position: fixed; top: 20px; left: 50%;
@@ -298,6 +313,9 @@ body {
 
   <div class="scroll">
     <div class="group-rows" id="mainGroups"></div>
+    <div class="import-wrap">
+      <button class="import-btn" onclick="importFromClipboard()">クリップボードからインポート</button>
+    </div>
   </div>
 </div>
 
@@ -573,33 +591,38 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').ca
 save();
 renderMain();
 
-// クリップボードからの自動インポート
-(async function() {
+// クリップボードからインポート（ボタン押下時）
+async function importFromClipboard() {
+  let text;
   try {
-    const text = await navigator.clipboard.readText();
-    if (!text) return;
-
-    let parsed;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      return; // JSONでなければ何もしない
-    }
-
-    if (!Array.isArray(parsed) || parsed.length === 0) return;
-
-    const urgencyMap = { must: 'must', want: 'want', idea: 'nice' };
-    parsed.forEach(t => {
-      const steps   = (t.steps || []).map(s => typeof s === 'string' ? { title: s, done: false } : s);
-      const urgency = t.urgency || urgencyMap[t.type] || 'want';
-      addTask({ ...t, urgency, estimate: t.estimate || 30, steps, done: false });
-    });
-    renderMain();
-    toast('✓ ' + parsed.length + '件のタスクをインポートしました');
+    text = await navigator.clipboard.readText();
   } catch {
-    // クリップボードへのアクセス拒否など。何もしない
+    alert('クリップボードへのアクセスが拒否されました。\nブラウザの権限設定を確認してください。');
+    return;
   }
-})();
+
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    alert('クリップボードの内容がJSONとして読み込めませんでした。');
+    return;
+  }
+
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    alert('インポートできるタスクがありませんでした。');
+    return;
+  }
+
+  const urgencyMap = { must: 'must', want: 'want', idea: 'nice' };
+  parsed.forEach(t => {
+    const steps   = (t.steps || []).map(s => typeof s === 'string' ? { title: s, done: false } : s);
+    const urgency = t.urgency || urgencyMap[t.type] || 'want';
+    addTask({ ...t, urgency, estimate: t.estimate || 30, steps, done: false });
+  });
+  renderMain();
+  toast('✓ ' + parsed.length + '件のタスクをインポートしました');
+}
 </script>
 </body>
 </html>
