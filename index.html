@@ -578,6 +578,7 @@ renderMain();
   const params = new URLSearchParams(window.location.search);
   const importData = params.get('import');
   if (!importData) return;
+  console.log('[FocusFlow] import raw:', importData);
 
   try {
     const decoded = decodeURIComponent(importData);
@@ -586,6 +587,7 @@ renderMain();
 
     const urgencyMap = { must: 'must', want: 'want', idea: 'nice' };
     parsed.forEach(t => {
+      // deadline など未知のフィールドは ...t で引き継がれるが無視される（エラーにならない）
       const steps   = (t.steps || []).map(s => typeof s === 'string' ? { title: s, done: false } : s);
       const urgency = t.urgency || urgencyMap[t.type] || 'want';
       addTask({ ...t, urgency, estimate: t.estimate || 30, steps, done: false });
