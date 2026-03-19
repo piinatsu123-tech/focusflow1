@@ -573,31 +573,31 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').ca
 save();
 renderMain();
 
-// URLパラメータからの自動インポート
-(function() {
-  const params = new URLSearchParams(window.location.search);
-  const importData = params.get('import');
-  if (!importData) return;
-  console.log('[FocusFlow] import raw:', importData);
-
+// クリップボードからの自動インポート
+(async function() {
   try {
-    const decoded = decodeURIComponent(importData);
-    const parsed  = JSON.parse(decoded);
-    if (!Array.isArray(parsed)) throw new Error('JSONは配列形式である必要があります');
+    const text = await navigator.clipboard.readText();
+    if (!text) return;
+
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return; // JSONでなければ何もしない
+    }
+
+    if (!Array.isArray(parsed) || parsed.length === 0) return;
 
     const urgencyMap = { must: 'must', want: 'want', idea: 'nice' };
     parsed.forEach(t => {
-      // deadline など未知のフィールドは ...t で引き継がれるが無視される（エラーにならない）
       const steps   = (t.steps || []).map(s => typeof s === 'string' ? { title: s, done: false } : s);
       const urgency = t.urgency || urgencyMap[t.type] || 'want';
       addTask({ ...t, urgency, estimate: t.estimate || 30, steps, done: false });
     });
     renderMain();
-    toast('✓ ' + parsed.length + '件を自動インポートしました');
-    history.replaceState(null, '', window.location.pathname);
-  } catch(e) {
-    history.replaceState(null, '', window.location.pathname);
-    alert('インポートに失敗しました: ' + e.message);
+    toast('✓ ' + parsed.length + '件のタスクをインポートしました');
+  } catch {
+    // クリップボードへのアクセス拒否など。何もしない
   }
 })();
 </script>
