@@ -18,12 +18,10 @@
   --text: #1a1a1a;
   --text2: #666666;
   --text3: #999999;
-  --must: #ff6b6b;
-  --want: #aaaaaa;
-  --nice: #aaaaaa;
-  --danger: #ff6b6b;
+  --must: #d94f4f;
   --border: #e8e8e8;
   --border-strong: #cccccc;
+  --danger: #d94f4f;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -33,647 +31,255 @@ body {
   color: var(--text);
   font-family: 'Noto Sans JP', sans-serif;
   font-size: 16px;
-  display: flex;
-  flex-direction: column;
 }
 
-/* ── NAV ── */
-.nav {
+/* ── SCREENS ── */
+.screen {
+  position: fixed;
+  inset: 0;
   display: flex;
+  flex-direction: column;
   background: var(--bg);
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+#screen-main  { z-index: 10; transform: none; }
+#screen-group { z-index: 20; }
+#screen-focus { z-index: 30; }
+.screen.visible { transform: translateX(0); }
+
+/* ── BACK BUTTON / HEADER ── */
+.screen-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px 12px 8px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-}
-.nav-btn {
-  flex: 1;
-  padding: 12px 8px;
-  background: none;
-  border: none;
-  color: var(--text2);
-  font-family: 'Noto Sans JP', sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: color .2s, border-color .2s;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
   min-height: 56px;
+  gap: 4px;
 }
-.nav-btn .nav-icon { font-size: 18px; }
-.nav-btn.active { color: var(--text); border-bottom-color: var(--text); }
-
-/* ── PAGES ── */
-.page { display: none; flex: 1; overflow: hidden; flex-direction: column; }
-.page.active { display: flex; }
-
-/* ── TASK HEADER ── */
-.task-header {
-  padding: 20px 20px 12px;
+.back-btn {
+  width: 44px; height: 44px;
+  border: none; background: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; color: var(--text);
+  border-radius: 50%;
+  transition: background 0.12s;
   flex-shrink: 0;
 }
-.task-header-top {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
+.back-btn:active { background: rgba(0,0,0,.07); }
+.header-title {
+  font-size: 17px; font-weight: 700; color: var(--text);
+  flex: 1; min-width: 0;
+}
+.header-sub {
+  font-size: 13px; color: var(--text2);
+  flex-shrink: 0;
+}
+
+/* ── MAIN HEADER ── */
+.main-header {
+  padding: 28px 20px 14px;
+  flex-shrink: 0;
 }
 .app-title {
-  font-family: 'Noto Sans JP', sans-serif;
-  font-weight: 900;
-  font-size: 26px;
-  color: var(--text);
-  letter-spacing: -0.5px;
+  font-weight: 900; font-size: 30px;
+  color: var(--text); letter-spacing: -0.5px;
+  line-height: 1;
 }
 .date-badge {
-  font-size: 13px;
-  color: var(--text2);
-  margin-left: auto;
+  font-size: 13px; color: var(--text2); margin-top: 5px;
 }
 
 /* ── TIME BAR ── */
 .time-bar-wrap {
-  padding: 0 20px 16px;
+  padding: 0 20px 22px;
   flex-shrink: 0;
 }
 .time-bar-label {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 8px;
+  display: flex; justify-content: space-between;
+  align-items: baseline; margin-bottom: 8px;
 }
-.time-bar-remaining {
-  font-size: 13px;
-  color: var(--text2);
-}
+.time-bar-remaining { font-size: 13px; color: var(--text2); }
 .time-bar-remaining strong {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--text);
+  font-size: 18px; font-weight: 700; color: var(--text);
 }
-.time-bar-total {
-  font-size: 12px;
-  color: var(--text3);
-}
+.time-bar-total { font-size: 12px; color: var(--text3); }
 .time-bar-track {
-  height: 5px;
-  background: var(--border);
-  border-radius: 3px;
-  overflow: hidden;
+  height: 5px; background: var(--border);
+  border-radius: 3px; overflow: hidden;
 }
 .time-bar-fill {
-  height: 100%;
-  background: var(--text);
-  border-radius: 3px;
-  transition: width 0.4s ease;
+  height: 100%; background: var(--text);
+  border-radius: 3px; transition: width 0.4s ease;
 }
 
-/* ── TASK SCROLL ── */
-.task-scroll { flex: 1; overflow-y: auto; padding: 0 20px 100px; overscroll-behavior: contain; }
-.task-scroll::-webkit-scrollbar { display: none; }
+/* ── SCROLL ── */
+.scroll {
+  flex: 1; overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.scroll::-webkit-scrollbar { display: none; }
 
-/* ── ACCORDION GROUPS ── */
-.group-wrap { margin-bottom: 4px; }
-.group-header {
-  display: flex;
-  align-items: baseline;
-  padding: 14px 16px;
+/* ── GROUP ROWS (main) ── */
+.group-rows { padding: 0 20px; }
+.group-row {
+  display: flex; align-items: center;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--border);
   cursor: pointer;
-  background: transparent;
-  border: none;
-  width: 100%;
-  text-align: left;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.12s;
   user-select: none;
+  transition: background 0.12s;
+  border-radius: 8px;
 }
-.group-header:active { background: rgba(0,0,0,.04); }
-.gh-key   { font-size: 22px; font-weight: 900; color: var(--text); letter-spacing: -0.5px; line-height: 1; }
-.gh-sub   { font-size: 13px; font-weight: 400; color: var(--text2); }
-.gh-mid   { font-size: 13px; color: var(--text2); margin-left: 10px; }
-.gh-count { font-size: 22px; font-weight: 900; color: var(--text); margin-left: 2px; letter-spacing: -0.5px; line-height: 1; }
-.gh-unit  { font-size: 13px; color: var(--text2); }
-.gh-est   { font-size: 12px; color: var(--text3); margin-left: 8px; }
-.gh-chevron {
-  margin-left: auto;
-  font-size: 16px;
-  color: var(--text3);
-  transition: transform 0.2s;
-  align-self: center;
-  flex-shrink: 0;
+.group-row:last-child { border-bottom: none; }
+.group-row:active { background: rgba(0,0,0,.04); }
+.group-row.zero { cursor: default; }
+
+.gr-label { flex: 1; }
+.gr-title {
+  font-size: 19px; font-weight: 900;
+  color: var(--text); letter-spacing: -0.3px; line-height: 1.2;
 }
-.group-wrap.open .gh-chevron { transform: rotate(90deg); }
-.group-wrap[data-urgency="must"] .gh-count { color: var(--must); }
-.group-body {
-  overflow: hidden;
-  max-height: 0;
-  transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+.gr-title.must-color { color: var(--must); }
+.group-row.zero .gr-title { color: var(--text3); }
+
+.gr-est { font-size: 13px; color: var(--text2); margin-top: 3px; }
+
+.gr-right { text-align: right; margin-right: 4px; }
+.gr-count {
+  font-size: 32px; font-weight: 900;
+  color: var(--text); letter-spacing: -1px; line-height: 1;
 }
+.gr-count.must-color { color: var(--must); }
+.group-row.zero .gr-count { color: var(--text3); }
+.gr-unit { font-size: 13px; color: var(--text2); }
+
+.gr-arrow {
+  font-size: 22px; color: var(--text3);
+  margin-left: 12px; flex-shrink: 0;
+}
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 64px 40px; text-align: center;
+  color: var(--text2); gap: 12px;
+}
+.empty-state .icon { font-size: 52px; line-height: 1; }
+.empty-state p { font-size: 16px; line-height: 1.9; }
 
 /* ── TASK CARDS ── */
+.task-list { padding: 16px 20px 40px; }
 .task-card {
   background: var(--card);
   border-left: 4px solid #dddddd;
-  border-radius: 0 10px 10px 0;
-  padding: 14px 14px 14px 16px;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  border-radius: 0 12px 12px 0;
+  padding: 16px 16px 16px 18px;
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 14px;
   cursor: pointer;
   transition: opacity 0.15s;
-  min-height: 60px;
+  min-height: 64px;
 }
 .task-card[data-urgency="must"] { border-left-color: var(--must); }
-.task-card[data-urgency="want"] { border-left-color: var(--want); }
-.task-card[data-urgency="nice"] { border-left-color: var(--nice); }
-.task-card.done-card { opacity: 0.5; border-left-color: #dddddd; }
-.task-card:active { opacity: 0.7; }
+.task-card.done-card { opacity: 0.45; border-left-color: #dddddd; cursor: default; }
+.task-card:not(.done-card):active { opacity: 0.7; }
 .task-card-body { flex: 1; min-width: 0; }
 .task-card-title {
-  font-size: 17px;
-  font-weight: 500;
-  line-height: 1.5;
-  margin-bottom: 4px;
-  word-break: break-word;
-  color: var(--text);
+  font-size: 17px; font-weight: 500; line-height: 1.5;
+  margin-bottom: 4px; word-break: break-word; color: var(--text);
 }
 .task-card.done-card .task-card-title {
-  text-decoration: line-through;
-  color: var(--text2);
+  text-decoration: line-through; color: var(--text2);
 }
-.task-card-meta {
-  font-size: 13px;
-  color: var(--text2);
-}
-.step-mini {
-  height: 2px;
-  background: var(--border);
-  border-radius: 1px;
-  margin-top: 8px;
-  overflow: hidden;
-}
-.step-mini-bar { height: 100%; background: var(--text); border-radius: 1px; transition: width 0.3s; }
+.task-card-meta { font-size: 13px; color: var(--text2); }
 
 .check-btn {
   width: 44px; height: 44px;
-  border-radius: 50%;
-  border: 2px solid var(--border-strong);
-  background: none;
-  cursor: pointer;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  transition: all .15s;
-  color: transparent;
+  border-radius: 50%; border: 2px solid var(--border-strong);
+  background: none; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; transition: all .15s; color: transparent;
 }
 .task-card.done-card .check-btn {
-  background: var(--text);
-  border-color: var(--text);
-  color: var(--bg);
+  background: var(--text); border-color: var(--text); color: var(--bg);
 }
 
-/* ── DONE SECTION ── */
-.done-section-hd {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: var(--text3);
-  text-transform: uppercase;
-  margin: 20px 0 10px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.done-section-hd::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-
-/* ── FAB ── */
-.fab-row {
-  position: fixed;
-  bottom: 72px;
-  right: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  align-items: flex-end;
-  z-index: 50;
-}
-.fab {
-  background: var(--text);
-  color: var(--bg);
-  border: none;
-  border-radius: 50px;
-  padding: 0 24px;
-  font-family: 'Noto Sans JP', sans-serif;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: opacity .15s;
-  height: 52px;
-}
-.fab:active { opacity: 0.8; }
-.fab.small {
-  background: var(--card);
-  color: var(--text);
-  border: 1.5px solid var(--border-strong);
-  font-size: 13px;
-  height: 44px;
-  padding: 0 18px;
-}
-
-/* ── ALL DONE ── */
-.all-done {
+/* ── FOCUS SCREEN ── */
+.focus-body {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  text-align: center; padding: 40px; gap: 14px; color: var(--text2);
+  padding: 32px 32px 48px; text-align: center;
 }
-.all-done .big { font-size: 56px; }
-.all-done p { font-size: 16px; line-height: 1.8; }
-
-/* ══════════════════════════════
-   FOCUS MODE PAGE
-══════════════════════════════ */
-.focus-page {
-  background: var(--bg);
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  overflow: hidden;
+.focus-group-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 2.5px;
+  color: var(--text2); text-transform: uppercase; margin-bottom: 16px;
 }
-.focus-page-header {
-  padding: 24px 24px 0;
-  flex-shrink: 0;
-}
-.focus-task-name {
-  font-size: 13px;
-  color: var(--text2);
-  margin-bottom: 6px;
-  font-weight: 500;
-}
-.focus-task-title {
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.3;
-  margin-bottom: 20px;
-  color: var(--text);
-}
-.no-focus-msg {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: var(--text2);
-  font-size: 15px;
-  text-align: center;
-  padding: 40px;
-  gap: 16px;
-}
-.no-focus-msg .big { font-size: 48px; }
-
-/* STEP DISPLAY */
-.step-display {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  overflow: hidden;
-}
-.step-counter {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text2);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-bottom: 20px;
-}
-.step-bubble {
-  background: var(--card);
-  border: 2px solid var(--text);
-  border-radius: 16px;
-  padding: 32px 28px;
-  text-align: center;
-  font-size: 22px;
-  font-weight: 600;
-  line-height: 1.6;
-  margin-bottom: 28px;
-  width: 100%;
-  max-width: 420px;
-  position: relative;
-  overflow: hidden;
-  color: var(--text);
-}
-.step-done-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(26,26,26,.05);
-  border-radius: 14px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  font-size: 56px;
-}
-.step-done-overlay.show { display: flex; }
-.step-nav {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 24px;
-}
-.step-nav-btn {
-  width: 52px; height: 52px;
-  border-radius: 50%;
-  border: 1.5px solid var(--border-strong);
-  background: var(--card);
-  color: var(--text);
-  font-size: 20px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity .15s;
-}
-.step-nav-btn:active { opacity: 0.7; }
-.step-nav-btn.primary {
-  width: 68px; height: 68px;
-  background: var(--text);
-  color: var(--bg);
-  border: none;
-  font-size: 26px;
-}
-.step-done-btn {
-  background: transparent;
-  border: 1.5px solid var(--border-strong);
-  color: var(--text2);
-  border-radius: 50px;
-  padding: 0 24px;
-  font-family: 'Noto Sans JP', sans-serif;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all .15s;
-  height: 44px;
-}
-
-/* TIMER */
-.timer-section {
-  flex-shrink: 0;
-  padding: 0 24px 28px;
-  background: var(--bg);
-  border-top: 1px solid var(--border);
+.focus-title {
+  font-size: 24px; font-weight: 700; line-height: 1.45;
+  color: var(--text); margin-bottom: 52px;
+  word-break: break-word; max-width: 340px;
 }
 .timer-display {
-  text-align: center;
-  padding: 20px 0 14px;
+  font-size: 76px; font-weight: 700; letter-spacing: 3px;
+  line-height: 1; color: var(--text); margin-bottom: 18px;
+  font-variant-numeric: tabular-nums;
 }
-.timer-time {
-  font-size: 60px;
-  font-weight: 700;
-  letter-spacing: 4px;
-  line-height: 1;
-  color: var(--text);
+.timer-display.urgent { color: var(--danger); }
+.timer-track {
+  width: 100%; max-width: 260px; height: 4px;
+  background: var(--border); border-radius: 2px; overflow: hidden;
+  margin-bottom: 52px;
 }
-.timer-time.urgent { color: var(--danger); }
-.timer-progress {
-  height: 3px;
-  background: var(--border);
-  border-radius: 2px;
-  margin: 12px 0;
-  overflow: hidden;
+.timer-fill {
+  height: 100%; background: var(--text);
+  border-radius: 2px; transition: width 0.5s linear;
 }
-.timer-progress-bar {
-  height: 100%;
-  background: var(--text);
-  border-radius: 2px;
-  transition: width .5s linear;
+.focus-btns {
+  display: flex; gap: 12px; width: 100%; max-width: 320px;
 }
-.timer-controls {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-}
-.timer-presets {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
-.preset-btn {
+.btn-start {
+  flex: 1; height: 56px;
+  background: var(--text); color: var(--bg);
+  border: none; border-radius: 50px;
   font-family: 'Noto Sans JP', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  padding: 0 16px;
-  border-radius: 50px;
-  border: 1.5px solid var(--border-strong);
-  background: transparent;
-  color: var(--text2);
-  cursor: pointer;
-  transition: all .15s;
-  height: 44px;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+  transition: opacity 0.15s;
 }
-.preset-btn.active, .preset-btn:hover {
-  border-color: var(--text);
-  color: var(--text);
-  font-weight: 700;
-}
-.timer-btn {
-  background: var(--card);
-  border: 1.5px solid var(--border-strong);
-  color: var(--text);
-  border-radius: 50px;
-  padding: 0 20px;
-  font-family: 'Noto Sans JP', sans-serif;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: opacity .15s;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 48px;
-}
-.timer-btn.start {
-  background: var(--text);
-  color: var(--bg);
-  border: none;
-  flex: 1;
-  justify-content: center;
-  font-size: 16px;
-  height: 52px;
-}
-.timer-btn:active { opacity: 0.75; }
-.timer-custom-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-  align-items: center;
-}
-.timer-custom-row input {
-  flex: 1;
-  background: var(--card);
-  border: 1.5px solid var(--border-strong);
-  border-radius: 10px;
-  padding: 0 14px;
-  color: var(--text);
-  font-family: 'Noto Sans JP', sans-serif;
-  font-size: 16px;
-  outline: none;
-  text-align: center;
-  -webkit-appearance: none;
-  height: 48px;
-}
-.timer-custom-row input:focus { border-color: var(--text); }
-.timer-custom-label { font-size: 13px; color: var(--text2); white-space: nowrap; }
-
-/* ══════════════════════════════
-   MODALS
-══════════════════════════════ */
-.overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.35);
-  z-index: 200;
-  display: flex;
-  align-items: flex-end;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .2s;
-}
-.overlay.open { opacity: 1; pointer-events: all; }
-.sheet {
-  background: var(--bg);
-  border-radius: 22px 22px 0 0;
-  padding: 24px 20px 48px;
-  width: 100%;
-  max-height: 92dvh;
-  overflow-y: auto;
-  transform: translateY(100%);
-  transition: transform .3s cubic-bezier(.34,1.1,.64,1);
-  border-top: 1px solid var(--border);
-}
-.overlay.open .sheet { transform: translateY(0); }
-.sheet-handle { width: 36px; height: 4px; background: var(--border-strong); border-radius: 2px; margin: 0 auto 20px; }
-.sheet-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; color: var(--text); }
-.field { margin-bottom: 16px; }
-.field label {
-  display: block;
-  font-size: 11px;
-  color: var(--text2);
-  margin-bottom: 8px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-}
-.field input, .field textarea {
-  width: 100%;
-  background: var(--card);
-  border: 1.5px solid var(--border-strong);
-  border-radius: 10px;
-  padding: 13px 15px;
-  color: var(--text);
-  font-family: 'Noto Sans JP', sans-serif;
-  font-size: 16px;
-  outline: none;
-  transition: border-color .2s;
-  -webkit-appearance: none;
-}
-.field input:focus, .field textarea:focus { border-color: var(--text); }
-.field textarea { resize: none; line-height: 1.7; min-height: 100px; }
-.radio-row { display: flex; gap: 8px; }
-.rbtn {
-  flex: 1; padding: 10px 4px; border-radius: 10px;
-  border: 1.5px solid var(--border-strong); background: transparent;
-  color: var(--text2); font-family: 'Noto Sans JP', sans-serif;
-  font-size: 13px; font-weight: 700; cursor: pointer;
-  text-align: center; transition: all .15s; min-height: 48px;
-}
-.rbtn.sm { border-color: var(--must); color: var(--must); background: rgba(255,107,107,.06); }
-.rbtn.sw { border-color: var(--text); color: var(--text); background: rgba(26,26,26,.06); }
-.rbtn.si { border-color: var(--border-strong); color: var(--text2); }
-.btn-primary {
-  width: 100%; height: 56px;
-  background: var(--text);
-  color: var(--bg); border: none;
-  border-radius: 50px;
-  font-family: 'Noto Sans JP', sans-serif;
-  font-size: 16px; font-weight: 700;
-  cursor: pointer; margin-top: 8px;
-  transition: opacity .15s;
-}
-.btn-primary:active { opacity: 0.8; }
-.btn-secondary {
-  width: 100%; height: 52px;
+.btn-start:active { opacity: 0.8; }
+.btn-complete {
+  height: 56px; padding: 0 22px;
   background: transparent; color: var(--text2);
   border: 1.5px solid var(--border-strong); border-radius: 50px;
-  font-family: 'Noto Sans JP', sans-serif; font-size: 15px; font-weight: 700;
-  cursor: pointer; margin-top: 10px; transition: opacity .15s;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  transition: opacity 0.15s; white-space: nowrap;
 }
-.btn-secondary:active { opacity: 0.7; }
+.btn-complete:active { opacity: 0.7; }
 
-/* import modal */
-.import-prompt-box {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px;
-  margin-bottom: 14px;
-  font-size: 13px;
-  color: var(--text2);
-  line-height: 1.8;
-}
-.import-prompt-box strong { color: var(--text); font-weight: 700; }
-.copy-prompt-btn {
-  width: 100%;
-  height: 48px;
-  background: transparent;
-  border: 1.5px solid var(--border-strong);
-  color: var(--text); border-radius: 50px;
-  font-family: 'Noto Sans JP', sans-serif; font-size: 14px; font-weight: 700;
-  cursor: pointer; margin-bottom: 16px; transition: opacity .15s;
-}
-.copy-prompt-btn:active { opacity: 0.7; }
-
-/* toast */
+/* ── TOAST ── */
 .toast {
-  position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px);
+  position: fixed; top: 20px; left: 50%;
+  transform: translateX(-50%) translateY(-80px);
   background: var(--text); border-radius: 50px; padding: 12px 22px;
   font-size: 14px; font-weight: 700; color: var(--bg);
   z-index: 400; transition: transform .3s cubic-bezier(.34,1.3,.64,1);
-  white-space: nowrap;
+  white-space: nowrap; pointer-events: none;
 }
 .toast.show { transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav class="nav">
-  <button class="nav-btn active" onclick="goPage('tasks',this)">
-    <span class="nav-icon">☰</span>タスク
-  </button>
-  <button class="nav-btn" onclick="goPage('focus',this)">
-    <span class="nav-icon">◎</span>集中モード
-  </button>
-</nav>
-
-<!-- ════ PAGE: TASKS ════ -->
-<div class="page active" id="page-tasks">
-  <div class="task-header">
-    <div class="task-header-top">
-      <div class="app-title">FocusFlow</div>
-      <div class="date-badge" id="dateBadge"></div>
-    </div>
+<!-- ════ SCREEN: MAIN ════ -->
+<div class="screen" id="screen-main">
+  <div class="main-header">
+    <div class="app-title">FocusFlow</div>
+    <div class="date-badge" id="dateBadge"></div>
   </div>
 
   <div class="time-bar-wrap">
@@ -686,176 +292,81 @@ body {
     </div>
   </div>
 
-  <div class="task-scroll" id="taskScroll"></div>
-
-  <div class="fab-row">
-    <button class="fab small" onclick="openImport()">↓ インポート</button>
-    <button class="fab" onclick="openAdd()">＋ タスク追加</button>
+  <div class="scroll">
+    <div class="group-rows" id="mainGroups"></div>
   </div>
 </div>
 
-<!-- ════ PAGE: FOCUS ════ -->
-<div class="page" id="page-focus">
-  <div class="no-focus-msg" id="noFocusMsg">
-    <span class="big">◎</span>
-    <p>タスク一覧からタスクを選んで<br>集中モードを開始してください</p>
+<!-- ════ SCREEN: GROUP DETAIL ════ -->
+<div class="screen" id="screen-group">
+  <div class="screen-header">
+    <button class="back-btn" onclick="goBack('group')">‹</button>
+    <div class="header-title" id="groupHeaderTitle"></div>
+    <div class="header-sub" id="groupHeaderSub"></div>
   </div>
-  <div id="focusContent" style="display:none;flex:1;display:none;flex-direction:column;overflow:hidden">
-    <div class="focus-page-header">
-      <div class="focus-task-name" id="focusTaskCat"></div>
-      <div class="focus-task-title" id="focusTaskTitle"></div>
-    </div>
-    <div class="step-display">
-      <div class="step-counter" id="stepCounter">STEP 1 / 1</div>
-      <div class="step-bubble" id="stepBubble">
-        <div>タスクを選んでください</div>
-        <div class="step-done-overlay" id="stepDoneOverlay">✓</div>
-      </div>
-      <div class="step-nav">
-        <button class="step-nav-btn" onclick="prevStep()">←</button>
-        <button class="step-nav-btn primary" onclick="completeStep()">✓</button>
-        <button class="step-nav-btn" onclick="nextStep()">→</button>
-      </div>
-      <button class="step-done-btn" id="stepDoneBtn" onclick="markStepDone()" style="display:none">このステップを完了にする</button>
-    </div>
-    <div class="timer-section">
-      <div class="timer-display">
-        <div class="timer-time" id="timerDisplay">25:00</div>
-        <div class="timer-progress"><div class="timer-progress-bar" id="timerBar" style="width:100%"></div></div>
-      </div>
-      <div class="timer-presets">
-        <button class="preset-btn active" onclick="setPreset(5,this)">5分</button>
-        <button class="preset-btn" onclick="setPreset(10,this)">10分</button>
-        <button class="preset-btn" onclick="setPreset(15,this)">15分</button>
-        <button class="preset-btn" onclick="setPreset(25,this)">25分</button>
-        <button class="preset-btn" onclick="setPreset(45,this)">45分</button>
-      </div>
-      <div class="timer-custom-row">
-        <input type="number" id="customMin" placeholder="分" min="1" max="180" onchange="setCustomTime()">
-        <span class="timer-custom-label">分でカスタム設定</span>
-      </div>
-      <div class="timer-controls">
-        <button class="timer-btn" onclick="resetTimer()">↺ リセット</button>
-        <button class="timer-btn start" id="timerStartBtn" onclick="toggleTimer()">▶ スタート</button>
-      </div>
-    </div>
+  <div class="scroll">
+    <div class="task-list" id="groupTaskList"></div>
   </div>
 </div>
 
-<!-- ════ MODAL: ADD TASK ════ -->
-<div class="overlay" id="addModal" onclick="bgClose(event,'addModal')">
-  <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">タスクを追加</div>
-    <div class="field">
-      <label>タイトル</label>
-      <input type="text" id="aTitle" placeholder="何をする？">
-    </div>
-    <div class="field">
-      <label>優先度</label>
-      <div class="radio-row" id="urgencyRow">
-        <button class="rbtn sm" data-v="must" onclick="pickUrgency(this)">今日中に絶対</button>
-        <button class="rbtn" data-v="want" onclick="pickUrgency(this)">できたら</button>
-        <button class="rbtn" data-v="nice" onclick="pickUrgency(this)">余力があれば</button>
-      </div>
-    </div>
-    <div class="field">
-      <label>見積もり時間（分）</label>
-      <input type="number" id="aEstimate" placeholder="30" min="1" max="480">
-    </div>
-    <div class="field">
-      <label>スモールステップ（任意・1行1ステップ）</label>
-      <textarea id="aSteps" placeholder="1. 資料を開く&#10;2. アウトラインを書く&#10;3. 本文を書く"></textarea>
-    </div>
-    <button class="btn-primary" onclick="saveAdd()">追加する</button>
-    <button class="btn-secondary" onclick="closeModal('addModal')">キャンセル</button>
+<!-- ════ SCREEN: FOCUS ════ -->
+<div class="screen" id="screen-focus">
+  <div class="screen-header">
+    <button class="back-btn" onclick="goBack('focus')">‹</button>
+    <div class="header-title">集中モード</div>
   </div>
-</div>
-
-<!-- ════ MODAL: IMPORT ════ -->
-<div class="overlay" id="importModal" onclick="bgClose(event,'importModal')">
-  <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">Claudeからインポート</div>
-
-    <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.7">
-      ① 下のプロンプトをコピーしてClaude.aiに送る<br>
-      ② やることを追加で伝える<br>
-      ③ 返ってきたJSONを貼り付けて「インポート」
+  <div class="focus-body">
+    <div class="focus-group-label" id="focusGroupLabel"></div>
+    <div class="focus-title" id="focusTitle"></div>
+    <div class="timer-display" id="timerDisplay">00:00</div>
+    <div class="timer-track"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
+    <div class="focus-btns">
+      <button class="btn-start" id="timerStartBtn" onclick="toggleTimer()">▶ スタート</button>
+      <button class="btn-complete" onclick="completeTask()">完了</button>
     </div>
-
-    <div class="import-prompt-box">
-      以下のタスクをJSON配列に変換してください。<br><br>
-      <strong>フォーマット:</strong><br>
-      [{"title":"タスク名","urgency":"must|want|nice","estimate":30,"steps":["ステップ1","ステップ2"]}]<br><br>
-      urgency: must=今日中に絶対やるべき / want=できたらやりたい / nice=余力があれば<br>
-      estimate: 作業時間の見積もり（分単位）、不明なら30<br>
-      steps: 空配列[]でもOK<br>
-      JSONのみ返してください。
-    </div>
-    <button class="copy-prompt-btn" onclick="copyPrompt()">📋 プロンプトをコピー</button>
-
-    <div class="field">
-      <label>JSONを貼り付け</label>
-      <textarea id="importJson" placeholder='[{"title":"...","urgency":"must","estimate":30,"steps":[]}]' style="min-height:120px;font-size:13px" autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"></textarea>
-    </div>
-    <button class="copy-prompt-btn" onclick="pasteFromClipboard()">📋 クリップボードから貼り付け</button>
-    <button class="btn-primary" onclick="doImport()">↓ インポートする</button>
-    <button class="btn-secondary" onclick="closeModal('importModal')">キャンセル</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════
-//  MIGRATION
-// ═══════════════════════════════════════
+// ─── MIGRATION ───────────────────────────────────────────────────
 function migrateTasks(list) {
   const urgencyMap = { must: 'must', want: 'want', idea: 'nice' };
   return list.map(t => {
     if ('type' in t) {
-      // Old schema → new schema
-      return {
-        id:        t.id,
-        done:      t.done,
-        title:     t.title,
-        urgency:   urgencyMap[t.type] || 'want',
-        estimate:  t.estimate || 30,
-        steps:     t.steps || [],
-        createdAt: t.createdAt,
-      };
+      return { id: t.id, done: t.done, title: t.title,
+               urgency: urgencyMap[t.type] || 'want',
+               estimate: t.estimate || 30,
+               steps: t.steps || [], createdAt: t.createdAt };
     }
-    if (!t.urgency) t.urgency = 'want';
+    if (!t.urgency)  t.urgency  = 'want';
     if (!t.estimate) t.estimate = 30;
     return t;
   });
 }
 
-// ═══════════════════════════════════════
-//  STATE
-// ═══════════════════════════════════════
-let tasks      = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
-let selId      = null;
-let stepIdx    = 0;
-let groupState = { must: true, want: true, nice: false };
-
-// timer
-let timerTotal   = 5 * 60;
-let timerLeft    = timerTotal;
-let timerRunning = false;
-let timerTick    = null;
-
-// form
-let aUrgency = 'must';
+// ─── STATE ───────────────────────────────────────────────────────
+let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
+let currentUrgency = null;
+let focusId        = null;
+let timerTotal     = 0;
+let timerLeft      = 0;
+let timerRunning   = false;
+let timerTick      = null;
 
 const uid  = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 const save = () => localStorage.setItem('ff-tasks', JSON.stringify(tasks));
-const esc  = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc  = s => String(s||'').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-// ═══════════════════════════════════════
-//  TOAST
-// ═══════════════════════════════════════
+const GROUP_CONFIG = [
+  { urgency: 'must', title: '今日中に絶対' },
+  { urgency: 'want', title: 'できたらやりたい' },
+  { urgency: 'nice', title: '余力があれば' },
+];
+
+// ─── TOAST ───────────────────────────────────────────────────────
 function toast(msg) {
   const el = document.getElementById('toast');
   el.textContent = msg;
@@ -863,251 +374,168 @@ function toast(msg) {
   setTimeout(() => el.classList.remove('show'), 2200);
 }
 
-// ═══════════════════════════════════════
-//  TIME BAR
-// ═══════════════════════════════════════
+// ─── TIME BAR ────────────────────────────────────────────────────
 function calcTimeBar() {
-  const totalMin    = tasks.reduce((s, t) => s + (t.estimate || 30), 0);
-  const remainMin   = tasks.filter(t => !t.done).reduce((s, t) => s + (t.estimate || 30), 0);
-  const completedMin = totalMin - remainMin;
-
-  const remainH = (remainMin / 60).toFixed(1);
-  const totalH  = (totalMin  / 60).toFixed(1);
-  const pct     = totalMin > 0 ? Math.round(completedMin / totalMin * 100) : 0;
-
-  document.getElementById('timeBarRemaining').textContent = remainH;
-  document.getElementById('timeBarTotal').textContent     = '/ ' + totalH + 'h';
-  document.getElementById('timeBarFill').style.width      = pct + '%';
+  const totalMin = tasks.reduce((s, t) => s + (t.estimate || 30), 0);
+  const remMin   = tasks.filter(t => !t.done).reduce((s, t) => s + (t.estimate || 30), 0);
+  const doneMin  = totalMin - remMin;
+  document.getElementById('timeBarRemaining').textContent = (remMin / 60).toFixed(1);
+  document.getElementById('timeBarTotal').textContent     = '/ ' + (totalMin / 60).toFixed(1) + 'h';
+  document.getElementById('timeBarFill').style.width      =
+    (totalMin > 0 ? Math.round(doneMin / totalMin * 100) : 0) + '%';
 }
 
-// ═══════════════════════════════════════
-//  RENDER
-// ═══════════════════════════════════════
-function renderGroups() {
-  const now = new Date();
+// ─── MAIN SCREEN ─────────────────────────────────────────────────
+function renderMain() {
   document.getElementById('dateBadge').textContent =
-    now.toLocaleDateString('ja-JP', { month:'short', day:'numeric', weekday:'short' });
-
+    new Date().toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', weekday: 'short' });
   calcTimeBar();
 
-  const mustTasks = tasks.filter(t => !t.done && t.urgency === 'must');
-  const wantTasks = tasks.filter(t => !t.done && t.urgency === 'want');
-  const niceTasks = tasks.filter(t => !t.done && t.urgency === 'nice');
-  const doneTasks = tasks.filter(t =>  t.done);
+  const incomplete = tasks.filter(t => !t.done);
+  const el = document.getElementById('mainGroups');
 
-  const scroll = document.getElementById('taskScroll');
-
-  if (!mustTasks.length && !wantTasks.length && !niceTasks.length && !doneTasks.length) {
-    scroll.innerHTML = `<div class="all-done"><span class="big">🎉</span><p>タスクがありません。<br>追加してはじめましょう！</p></div>`;
+  if (!incomplete.length) {
+    el.innerHTML = `<div class="empty-state"><span class="icon">✓</span><p>すべてのタスクが完了しました！</p></div>`;
     return;
   }
 
   let html = '';
-  html += groupHTML('must', mustTasks);
-  html += groupHTML('want', wantTasks);
-  html += groupHTML('nice', niceTasks);
+  GROUP_CONFIG.forEach(({ urgency, title }) => {
+    const list   = tasks.filter(t => !t.done && t.urgency === urgency);
+    const count  = list.length;
+    const estMin = list.reduce((s, t) => s + (t.estimate || 30), 0);
+    const estStr = count > 0
+      ? (estMin >= 60 ? (estMin / 60).toFixed(1) + 'h' : estMin + '分')
+      : '';
+    const zeroClass  = count === 0 ? ' zero' : '';
+    const mustClass  = urgency === 'must' && count > 0 ? ' must-color' : '';
+    const clickAttr  = count > 0 ? `onclick="showGroup('${urgency}')"` : '';
 
-  if (doneTasks.length) {
-    html += `<div class="done-section-hd">完了済み</div>`;
-    doneTasks.forEach(t => { html += taskCardHTML(t); });
-  }
-
-  scroll.innerHTML = html;
-
-  // Set initial max-height for open groups
-  ['must', 'want', 'nice'].forEach(u => {
-    if (groupState[u]) {
-      const body = document.getElementById('group-body-' + u);
-      if (body) body.style.maxHeight = '9999px';
-    }
+    html += `
+    <div class="group-row${zeroClass}" ${clickAttr}>
+      <div class="gr-label">
+        <div class="gr-title${mustClass}">${title}</div>
+        ${estStr ? `<div class="gr-est">${estStr}</div>` : ''}
+      </div>
+      <div class="gr-right">
+        <div class="gr-count${mustClass}">${count}</div>
+        <div class="gr-unit">件</div>
+      </div>
+      ${count > 0 ? '<div class="gr-arrow">›</div>' : ''}
+    </div>`;
   });
+
+  el.innerHTML = html;
 }
 
-// Alias for backward compatibility (called by toggleDone, markStepDone, etc.)
-const render = renderGroups;
+// ─── GROUP DETAIL ─────────────────────────────────────────────────
+function showGroup(urgency) {
+  currentUrgency = urgency;
+  const cfg = GROUP_CONFIG.find(g => g.urgency === urgency);
+  const list = tasks.filter(t => !t.done && t.urgency === urgency);
 
-function groupHTML(urgency, taskList) {
-  const labels = {
-    must: { key: '今日中', sub: 'に絶対' },
-    want: { key: 'できたら', sub: 'やりたい' },
-    nice: { key: '余力', sub: 'があれば' },
-  };
-  const lbl    = labels[urgency];
-  const count  = taskList.length;
-  const estMin = taskList.reduce((s, t) => s + (t.estimate || 30), 0);
-  const estStr = estMin >= 60
-    ? (estMin / 60).toFixed(1) + 'h'
-    : estMin + '分';
-  const isOpen = groupState[urgency];
+  const estMin = list.reduce((s, t) => s + (t.estimate || 30), 0);
+  const estStr = estMin >= 60 ? (estMin / 60).toFixed(1) + 'h' : estMin + '分';
 
-  const cardsHTML = taskList.length
-    ? taskList.map(t => taskCardHTML(t)).join('')
-    : `<div style="padding:12px 16px;font-size:13px;color:var(--text3)">タスクなし</div>`;
+  document.getElementById('groupHeaderTitle').textContent = cfg.title;
+  document.getElementById('groupHeaderSub').textContent   = list.length > 0 ? estStr : '';
 
-  return `<div class="group-wrap ${isOpen ? 'open' : ''}" data-urgency="${urgency}" id="group-${urgency}">
-    <button class="group-header" onclick="toggleGroup('${urgency}')">
-      <span class="gh-key">${lbl.key}</span><span class="gh-sub">${lbl.sub}</span>
-      <span class="gh-mid">残り</span><span class="gh-count">${count}</span><span class="gh-unit">件</span>
-      <span class="gh-est">${taskList.length ? estStr : ''}</span>
-      <span class="gh-chevron">›</span>
-    </button>
-    <div class="group-body" id="group-body-${urgency}">
-      ${cardsHTML}
-    </div>
-  </div>`;
+  renderGroupList();
+  document.getElementById('screen-group').classList.add('visible');
+}
+
+function renderGroupList() {
+  const list = tasks.filter(t => !t.done && t.urgency === currentUrgency);
+  const el   = document.getElementById('groupTaskList');
+
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-state"><p>タスクがありません</p></div>`;
+    return;
+  }
+  el.innerHTML = list.map(taskCardHTML).join('');
 }
 
 function taskCardHTML(t) {
-  const hasSteps  = t.steps && t.steps.length;
-  const doneSteps = hasSteps ? t.steps.filter(s => s.done).length : 0;
-  const doneCls   = t.done ? 'done-card' : '';
-  const estLabel  = (t.estimate || 30) + '分';
-
-  return `<div class="task-card ${doneCls}" data-urgency="${t.urgency || 'want'}" onclick="selectTask('${t.id}')">
+  return `<div class="task-card" data-urgency="${t.urgency || 'want'}" onclick="selectTask('${t.id}')">
     <div class="task-card-body">
       <div class="task-card-title">${esc(t.title)}</div>
-      <div class="task-card-meta">${estLabel}</div>
-      ${hasSteps ? `<div class="step-mini"><div class="step-mini-bar" style="width:${Math.round(doneSteps/t.steps.length*100)}%"></div></div>` : ''}
+      <div class="task-card-meta">${t.estimate || 30}分</div>
     </div>
     <button class="check-btn" onclick="event.stopPropagation();toggleDone('${t.id}')">${t.done ? '✓' : ''}</button>
   </div>`;
 }
 
-// ═══════════════════════════════════════
-//  ACCORDION
-// ═══════════════════════════════════════
-function toggleGroup(urgency) {
-  groupState[urgency] = !groupState[urgency];
-  const wrap = document.getElementById('group-' + urgency);
-  const body = document.getElementById('group-body-' + urgency);
-
-  if (groupState[urgency]) {
-    wrap.classList.add('open');
-    const h = body.scrollHeight;
-    body.style.maxHeight = h + 'px';
-    body.addEventListener('transitionend', function once() {
-      body.removeEventListener('transitionend', once);
-      body.style.maxHeight = '9999px';
-    });
-  } else {
-    wrap.classList.remove('open');
-    body.style.maxHeight = body.scrollHeight + 'px';
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        body.style.maxHeight = '0';
-      });
-    });
-  }
-}
-
-// ═══════════════════════════════════════
-//  TASK ACTIONS
-// ═══════════════════════════════════════
+// ─── TASK ACTIONS ─────────────────────────────────────────────────
 function selectTask(id) {
   startFocus(id);
 }
 
 function toggleDone(id) {
   const t = tasks.find(t => t.id === id);
-  if (t) {
-    t.done = !t.done;
-    save();
-    render();
-  }
+  if (!t) return;
+  t.done = !t.done;
+  save();
+  renderMain();
+  if (currentUrgency) renderGroupList();
 }
 
 function addTask(t) {
   tasks.unshift({ id: uid(), done: false, steps: [], createdAt: new Date().toISOString(), ...t });
   save();
-  render();
 }
 
-// ═══════════════════════════════════════
-//  FOCUS MODE
-// ═══════════════════════════════════════
+// ─── FOCUS MODE ───────────────────────────────────────────────────
 function startFocus(id) {
-  selId = id;
-  stepIdx = 0;
-  goPage('focus', document.querySelectorAll('.nav-btn')[1]);
-  renderFocus();
-}
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  focusId = id;
+  stopTimer();
 
-function renderFocus() {
-  const t = tasks.find(t => t.id === selId);
-  const noMsg  = document.getElementById('noFocusMsg');
-  const content = document.getElementById('focusContent');
+  const cfg = GROUP_CONFIG.find(g => g.urgency === t.urgency);
+  document.getElementById('focusGroupLabel').textContent = cfg ? cfg.title : '';
+  document.getElementById('focusTitle').textContent      = t.title;
+  document.getElementById('timerStartBtn').textContent   = '▶ スタート';
 
-  if (!t || t.done) {
-    noMsg.style.display = 'flex'; content.style.display = 'none'; return;
-  }
-  noMsg.style.display = 'none'; content.style.display = 'flex';
-
-  const urgencyLabel = { must: '今日中に絶対', want: 'できたらやりたい', nice: '余力があれば' };
-  document.getElementById('focusTaskCat').textContent   = urgencyLabel[t.urgency] || '';
-  document.getElementById('focusTaskTitle').textContent = t.title;
-
-  if (!t.steps || !t.steps.length) {
-    document.getElementById('stepCounter').textContent = 'ステップなし';
-    document.getElementById('stepBubble').innerHTML = `<div style="color:var(--text2);font-size:15px">スモールステップが設定されていません<br><br><span style="font-size:13px">タスクにステップを追加してください</span></div><div class="step-done-overlay" id="stepDoneOverlay"></div>`;
-    document.getElementById('stepDoneBtn').style.display = 'none';
-    return;
-  }
-
-  if (stepIdx >= t.steps.length) stepIdx = t.steps.length - 1;
-  if (stepIdx < 0) stepIdx = 0;
-  const step = t.steps[stepIdx];
-
-  document.getElementById('stepCounter').textContent = `STEP ${stepIdx + 1} / ${t.steps.length}`;
-  document.getElementById('stepBubble').innerHTML = `<div>${esc(step.title)}</div><div class="step-done-overlay ${step.done ? 'show' : ''}" id="stepDoneOverlay">✓</div>`;
-  document.getElementById('stepDoneBtn').style.display = step.done ? 'none' : 'block';
-}
-
-function prevStep() {
-  if (stepIdx > 0) { stepIdx--; renderFocus(); }
-}
-function nextStep() {
-  const t = tasks.find(t => t.id === selId);
-  if (t && t.steps && stepIdx < t.steps.length - 1) { stepIdx++; renderFocus(); }
-}
-function completeStep() {
-  markStepDone();
-  const t = tasks.find(t => t.id === selId);
-  if (t && t.steps && stepIdx < t.steps.length - 1) { setTimeout(() => { stepIdx++; renderFocus(); }, 600); }
-}
-function markStepDone() {
-  const t = tasks.find(t => t.id === selId);
-  if (t && t.steps && t.steps[stepIdx]) {
-    t.steps[stepIdx].done = true;
-    save(); renderFocus(); render();
-    toast('✓ ステップ完了！');
-  }
-}
-
-// ═══════════════════════════════════════
-//  TIMER
-// ═══════════════════════════════════════
-function setPreset(min, el) {
-  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
-  timerTotal = min * 60;
+  timerTotal = (t.estimate || 30) * 60;
   timerLeft  = timerTotal;
-  timerRunning = false;
+  updateTimerUI();
+  document.getElementById('screen-focus').classList.add('visible');
+}
+
+function completeTask() {
+  if (focusId) {
+    const t = tasks.find(t => t.id === focusId);
+    if (t) { t.done = true; save(); toast('✓ タスク完了！'); }
+  }
+  stopTimer();
+  document.getElementById('screen-focus').classList.remove('visible');
+  document.getElementById('screen-group').classList.remove('visible');
+  focusId = null;
+  currentUrgency = null;
+  renderMain();
+}
+
+function goBack(from) {
+  if (from === 'focus') {
+    stopTimer();
+    document.getElementById('screen-focus').classList.remove('visible');
+    focusId = null;
+  } else if (from === 'group') {
+    document.getElementById('screen-group').classList.remove('visible');
+    currentUrgency = null;
+    renderMain();
+  }
+}
+
+// ─── TIMER ────────────────────────────────────────────────────────
+function stopTimer() {
   clearInterval(timerTick);
-  updateTimerUI();
-  document.getElementById('timerStartBtn').textContent = '▶ スタート';
+  timerRunning = false;
 }
-function setCustomTime() {
-  const v = parseInt(document.getElementById('customMin').value);
-  if (!v || v < 1) return;
-  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-  timerTotal = v * 60; timerLeft = timerTotal;
-  timerRunning = false; clearInterval(timerTick);
-  updateTimerUI();
-  document.getElementById('timerStartBtn').textContent = '▶ スタート';
-}
+
 function toggleTimer() {
   if (timerRunning) {
-    clearInterval(timerTick); timerRunning = false;
+    stopTimer();
     document.getElementById('timerStartBtn').textContent = '▶ 再開';
   } else {
     if (timerLeft <= 0) timerLeft = timerTotal;
@@ -1117,177 +545,51 @@ function toggleTimer() {
       timerLeft--;
       updateTimerUI();
       if (timerLeft <= 0) {
-        clearInterval(timerTick); timerRunning = false;
+        stopTimer();
         document.getElementById('timerStartBtn').textContent = '▶ スタート';
-        toast('⏰ タイマー終了！');
+        toast('⏰ 時間になりました！');
       }
     }, 1000);
   }
 }
-function resetTimer() {
-  clearInterval(timerTick); timerRunning = false; timerLeft = timerTotal;
-  document.getElementById('timerStartBtn').textContent = '▶ スタート';
-  updateTimerUI();
-}
+
 function updateTimerUI() {
   const m = Math.floor(timerLeft / 60), s = timerLeft % 60;
-  const disp = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   const el = document.getElementById('timerDisplay');
-  el.textContent = disp;
-  el.className = 'timer-time' + (timerLeft <= 30 && timerLeft > 0 ? ' urgent' : '');
-  const pct = timerTotal > 0 ? timerLeft / timerTotal * 100 : 0;
-  document.getElementById('timerBar').style.width = pct + '%';
+  el.textContent  = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  el.className    = 'timer-display' + (timerLeft <= 30 && timerLeft > 0 ? ' urgent' : '');
+  document.getElementById('timerFill').style.width =
+    (timerTotal > 0 ? timerLeft / timerTotal * 100 : 0) + '%';
 }
 
-// ═══════════════════════════════════════
-//  ADD TASK MODAL
-// ═══════════════════════════════════════
-function openAdd() {
-  aUrgency = 'must';
-  document.getElementById('aTitle').value    = '';
-  document.getElementById('aEstimate').value = '30';
-  document.getElementById('aSteps').value    = '';
-  document.querySelectorAll('#urgencyRow .rbtn').forEach(b => {
-    b.className = 'rbtn' + (b.dataset.v === 'must' ? ' sm' : '');
-  });
-  openModal('addModal');
-  setTimeout(() => document.getElementById('aTitle').focus(), 300);
-}
-
-function pickUrgency(el) {
-  document.querySelectorAll('#urgencyRow .rbtn').forEach(b => b.className = 'rbtn');
-  aUrgency = el.dataset.v;
-  const cls = aUrgency === 'must' ? 'sm' : aUrgency === 'want' ? 'sw' : 'si';
-  el.className = 'rbtn ' + cls;
-}
-
-function saveAdd() {
-  const title = document.getElementById('aTitle').value.trim();
-  if (!title) return;
-  const estimate = parseInt(document.getElementById('aEstimate').value) || 30;
-  const stepsRaw = document.getElementById('aSteps').value.trim();
-  const steps = stepsRaw
-    ? stepsRaw.split('\n').map(l => l.replace(/^\d+\.\s*/, '').trim()).filter(Boolean).map(s => ({ title: s, done: false }))
-    : [];
-  addTask({ title, urgency: aUrgency, estimate, steps });
-  closeModal('addModal');
-  toast('✓ タスクを追加しました');
-}
-
-// ═══════════════════════════════════════
-//  IMPORT
-// ═══════════════════════════════════════
-const PROMPT_TEMPLATE = `以下のタスクをJSON配列に変換してください。
-
-フォーマット:
-[{"title":"タスク名","urgency":"must|want|nice","estimate":30,"steps":["ステップ1","ステップ2"]}]
-
-urgency: must=今日中に絶対やるべき / want=できたらやりたい / nice=余力があれば
-estimate: 作業時間の見積もり（分単位）、不明なら30
-steps: 空配列[]でもOK、ある場合は具体的なスモールステップを3〜5個
-
-JSONのみ返してください。説明・\`\`\`不要。
-
---- ここにやることを書いてください ---`;
-
-function openImport() {
-  document.getElementById('importJson').value = '';
-  openModal('importModal');
-}
-function copyPrompt() {
-  navigator.clipboard.writeText(PROMPT_TEMPLATE).then(() => toast('📋 プロンプトをコピーしました'));
-}
-async function pasteFromClipboard() {
-  try {
-    const text = await navigator.clipboard.readText();
-    document.getElementById('importJson').value = text;
-    toast('📋 貼り付けました');
-  } catch(e) {
-    toast('⚠ クリップボードへのアクセスを許可してください');
-  }
-}
-
-function doImport() {
-  let raw = document.getElementById('importJson').value;
-  if (!raw.trim()) { toast('JSONを貼り付けてください'); return; }
-  raw = raw
-    .replace(/\uFEFF/g, '')
-    .replace(/```json|```/g, '')
-    .replace(/[\u200B-\u200D]/g, '')
-    .replace(/\u3000/g, ' ')
-    .replace(/[\u201C\u201D\u201E\u201F\u02BA\uFF02\u275D\u275E]/g, '"')
-    .replace(/[\u2018\u2019\u201A\u201B\u02B9\uFF07\u275B\u275C]/g, "'")
-    .replace(/\uFF3B/g, '[').replace(/\uFF3D/g, ']')
-    .replace(/\uFF5B/g, '{').replace(/\uFF5D/g, '}')
-    .replace(/\uFF0C/g, ',').replace(/\uFF1A/g, ':')
-    .trim();
-  const start = raw.indexOf('[');
-  const end   = raw.lastIndexOf(']');
-  if (start !== -1 && end !== -1) raw = raw.slice(start, end + 1);
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) throw new Error('配列ではありません');
-    const urgencyMap = { must: 'must', want: 'want', idea: 'nice' };
-    parsed.forEach(t => {
-      const steps    = (t.steps || []).map(s => typeof s === 'string' ? { title: s, done: false } : s);
-      const urgency  = t.urgency || urgencyMap[t.type] || 'want';
-      const estimate = t.estimate || 30;
-      addTask({ ...t, urgency, estimate, steps, done: false });
-    });
-    closeModal('importModal');
-    toast('✓ ' + parsed.length + '件インポートしました');
-  } catch(e) {
-    alert('JSONの読み込みに失敗しました。\n\nエラー: ' + e.message + '\n\n先頭5文字: ' + raw.slice(0,5).split('').map(c => c.charCodeAt(0).toString(16)).join(' '));
-  }
-}
-
-// ═══════════════════════════════════════
-//  NAV & MODAL UTILS
-// ═══════════════════════════════════════
-function goPage(id, btn) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + id).classList.add('active');
-  btn.classList.add('active');
-  if (id === 'focus') renderFocus();
-}
-function openModal(id)  { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function bgClose(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
-
-// ═══════════════════════════════════════
-//  PWA
-// ═══════════════════════════════════════
+// ─── PWA ──────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
 
-// ═══════════════════════════════════════
-//  INIT
-// ═══════════════════════════════════════
-save(); // persist migrated data
-updateTimerUI();
-renderGroups();
+// ─── INIT ─────────────────────────────────────────────────────────
+save();
+renderMain();
 
-// URLパラメータからの自動インポート（ショートカット連携用）
+// URLパラメータからの自動インポート
 (function() {
   const params = new URLSearchParams(window.location.search);
   const json = params.get('import');
-  if (json) {
-    try {
-      const parsed = JSON.parse(decodeURIComponent(json));
-      if (Array.isArray(parsed)) {
-        const urgencyMap = { must: 'must', want: 'want', idea: 'nice' };
-        parsed.forEach(t => {
-          const steps   = (t.steps || []).map(s => typeof s === 'string' ? { title: s, done: false } : s);
-          const urgency = t.urgency || urgencyMap[t.type] || 'want';
-          addTask({ ...t, urgency, estimate: t.estimate || 30, steps, done: false });
-        });
-        toast('✓ ' + parsed.length + '件を自動インポートしました');
-        history.replaceState(null, '', window.location.pathname);
-      }
-    } catch(e) {
-      history.replaceState(null, '', window.location.pathname);
-      alert('インポートに失敗しました。\nURLのJSONが正しくない可能性があります。\n\nエラー: ' + e.message);
+  if (!json) return;
+  try {
+    const parsed = JSON.parse(decodeURIComponent(json));
+    if (Array.isArray(parsed)) {
+      const urgencyMap = { must: 'must', want: 'want', idea: 'nice' };
+      parsed.forEach(t => {
+        const steps   = (t.steps || []).map(s => typeof s === 'string' ? { title: s, done: false } : s);
+        const urgency = t.urgency || urgencyMap[t.type] || 'want';
+        addTask({ ...t, urgency, estimate: t.estimate || 30, steps, done: false });
+      });
+      renderMain();
+      toast('✓ ' + parsed.length + '件を自動インポートしました');
     }
+    history.replaceState(null, '', window.location.pathname);
+  } catch(e) {
+    history.replaceState(null, '', window.location.pathname);
+    alert('インポートに失敗しました。\nURLのJSONが正しくない可能性があります。\n\nエラー: ' + e.message);
   }
 })();
 </script>
