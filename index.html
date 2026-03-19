@@ -599,15 +599,15 @@ async function importFromClipboard() {
   try {
     text = await navigator.clipboard.readText();
   } catch {
-    alert('クリップボードへのアクセスが拒否されました。\nブラウザの権限設定を確認してください。');
-    return;
+    text = prompt('JSONを貼り付けてください：');
+    if (!text) return;
   }
 
   let parsed;
   try {
     parsed = JSON.parse(text);
   } catch {
-    alert('クリップボードの内容がJSONとして読み込めませんでした。');
+    alert('JSONとして読み込めませんでした。');
     return;
   }
 
