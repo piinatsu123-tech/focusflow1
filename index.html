@@ -576,24 +576,36 @@ renderMain();
 // URLパラメータからの自動インポート
 (function() {
   const params = new URLSearchParams(window.location.search);
-  const json = params.get('import');
-  if (!json) return;
+  const raw = params.get('import');
+  if (!raw) return;
+
+  // Step1: URLデコード（URLSearchParams.get()は1段階しかデコードしないため明示的にデコード）
+  let jsonStr;
   try {
-    const parsed = JSON.parse(decodeURIComponent(json));
-    if (Array.isArray(parsed)) {
-      const urgencyMap = { must: 'must', want: 'want', idea: 'nice' };
-      parsed.forEach(t => {
-        const steps   = (t.steps || []).map(s => typeof s === 'string' ? { title: s, done: false } : s);
-        const urgency = t.urgency || urgencyMap[t.type] || 'want';
-        addTask({ ...t, urgency, estimate: t.estimate || 30, steps, done: false });
-      });
-      renderMain();
-      toast('✓ ' + parsed.length + '件を自動インポートしました');
-    }
+    jsonStr = decodeURIComponent(raw);
+  } catch(e) {
+    history.replaceState(null, '', window.location.pathname);
+    alert('インポートに失敗しました。\nURLエンコードが正しくありません。\n\nエラー: ' + e.message);
+    return;
+  }
+
+  // Step2: JSONパース
+  try {
+    const parsed = JSON.parse(jsonStr);
+    if (!Array.isArray(parsed)) throw new Error('JSONは配列形式である必要があります');
+
+    const urgencyMap = { must: 'must', want: 'want', idea: 'nice' };
+    parsed.forEach(t => {
+      const steps   = (t.steps || []).map(s => typeof s === 'string' ? { title: s, done: false } : s);
+      const urgency = t.urgency || urgencyMap[t.type] || 'want';
+      addTask({ ...t, urgency, estimate: t.estimate || 30, steps, done: false });
+    });
+    renderMain();
+    toast('✓ ' + parsed.length + '件を自動インポートしました');
     history.replaceState(null, '', window.location.pathname);
   } catch(e) {
     history.replaceState(null, '', window.location.pathname);
-    alert('インポートに失敗しました。\nURLのJSONが正しくない可能性があります。\n\nエラー: ' + e.message);
+    alert('インポートに失敗しました。\nJSONの形式が正しくありません。\n\nエラー: ' + e.message);
   }
 })();
 </script>
