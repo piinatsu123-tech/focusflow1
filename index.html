@@ -217,7 +217,48 @@ body {
 .focus-body {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  padding: 32px 32px 48px; text-align: center;
+  padding: 20px 28px 48px; text-align: center;
+}
+.focus-task-title {
+  font-size: 13px; font-weight: 500; color: var(--text2);
+  margin-bottom: 20px; line-height: 1.4; word-break: break-word;
+  max-width: 100%;
+}
+/* ステップ一覧ドロワー */
+.step-list-overlay {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(0,0,0,0.35);
+  display: flex; align-items: flex-end;
+}
+.step-list-sheet {
+  width: 100%; background: var(--bg);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 24px 48px; max-height: 70vh; overflow-y: auto;
+}
+.step-list-title {
+  font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
+  color: var(--text2); text-transform: uppercase;
+  margin-bottom: 16px; text-align: center;
+}
+.step-list-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.step-list-item:last-child { border-bottom: none; }
+.step-list-check {
+  width: 24px; height: 24px; flex-shrink: 0;
+  border-radius: 50%; border: 2px solid var(--border-strong);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+}
+.step-list-item.done .step-list-check {
+  background: var(--text); border-color: var(--text); color: var(--bg);
+}
+.step-list-label {
+  font-size: 16px; line-height: 1.45; color: var(--text);
+}
+.step-list-item.done .step-list-label {
+  text-decoration: line-through; color: var(--text2);
 }
 .focus-step-widget {
   width: 100%; margin-bottom: 36px;
@@ -357,6 +398,7 @@ body {
     <div class="header-title">集中モード</div>
   </div>
   <div class="focus-body">
+    <div class="focus-task-title" id="focusTaskTitle"></div>
     <div class="focus-step-widget" id="focusStepWidget" style="display:none"></div>
     <div class="timer-display" id="timerDisplay">00:00</div>
     <div class="timer-track"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
@@ -532,6 +574,7 @@ function startFocus(id) {
   stopTimer();
 
   document.getElementById('timerStartBtn').textContent = '▶ スタート';
+  document.getElementById('focusTaskTitle').textContent = t.title;
 
   // スモールステップ描画（1件ずつ）
   renderCurrentStep();
@@ -563,9 +606,34 @@ function renderCurrentStep() {
   const label = typeof steps[idx] === 'string' ? steps[idx] : (steps[idx].title || '');
   const doneCount = steps.filter(s => s.done).length;
   widget.innerHTML = `
-    <div class="focus-step-counter">ステップ ${doneCount + 1} / ${total}</div>
+    <div class="focus-step-counter" onclick="showStepList()" style="cursor:pointer">
+      ステップ ${doneCount + 1} / ${total} &#8250;
+    </div>
     <div class="focus-step-text">${esc(label)}</div>
     <button class="focus-step-next" onclick="advanceStep()">完了</button>`;
+}
+
+function showStepList() {
+  const t = tasks.find(t => t.id === focusId);
+  if (!t || !t.steps) return;
+  const items = t.steps.map((s, i) => {
+    const done  = s.done || false;
+    const label = typeof s === 'string' ? s : (s.title || '');
+    return `<div class="step-list-item${done ? ' done' : ''}">
+      <div class="step-list-check">${done ? '✓' : ''}</div>
+      <div class="step-list-label">${esc(label)}</div>
+    </div>`;
+  }).join('');
+  const overlay = document.createElement('div');
+  overlay.className = 'step-list-overlay';
+  overlay.innerHTML = `<div class="step-list-sheet">
+    <div class="step-list-title">すべてのステップ</div>
+    ${items}
+  </div>`;
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.remove();
+  });
+  document.body.appendChild(overlay);
 }
 
 function advanceStep() {
