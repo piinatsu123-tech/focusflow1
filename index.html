@@ -757,11 +757,10 @@ async function importFromClipboard() {
     text = prompt('JSONを貼り付けてください：');
     if (!text) return;
     text = text.trim();
-    console.log('[import] prompt input:', text);
     try {
       parsed = JSON.parse(text);
-    } catch(e) {
-      alert('JSONエラー: ' + e.message + '\n\n先頭5文字: ' + JSON.stringify(text.slice(0,5)));
+    } catch {
+      alert('JSONとして読み込めませんでした。');
       return;
     }
   }
