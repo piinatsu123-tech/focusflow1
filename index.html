@@ -228,12 +228,12 @@ body {
 .step-list-overlay {
   position: fixed; inset: 0; z-index: 50;
   background: rgba(0,0,0,0.35);
-  display: flex; align-items: flex-end;
+  display: flex; align-items: flex-start;
 }
 .step-list-sheet {
   width: 100%; background: var(--bg);
-  border-radius: 20px 20px 0 0;
-  padding: 20px 24px 48px; max-height: 70vh; overflow-y: auto;
+  border-radius: 0 0 20px 20px;
+  padding: 20px 24px 32px; max-height: 70vh; overflow-y: auto;
 }
 .step-list-title {
   font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
@@ -286,21 +286,30 @@ body {
   font-size: 16px; font-weight: 700; color: var(--text2);
   text-align: center; padding: 8px 0;
 }
+.timer-ring-wrap {
+  position: relative;
+  width: 220px; height: 220px;
+  margin-bottom: 36px; flex-shrink: 0;
+}
+.timer-ring {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  transform: rotate(-90deg);
+  transition: background 0.6s linear;
+}
+.timer-inner {
+  position: absolute;
+  inset: 22px;
+  background: var(--bg);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
 .timer-display {
-  font-size: 76px; font-weight: 700; letter-spacing: 3px;
-  line-height: 1; color: var(--text); margin-bottom: 18px;
+  font-size: 52px; font-weight: 700; letter-spacing: 1px;
+  line-height: 1; color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 .timer-display.urgent { color: var(--danger); }
-.timer-track {
-  width: 100%; max-width: 260px; height: 4px;
-  background: var(--border); border-radius: 2px; overflow: hidden;
-  margin-bottom: 52px;
-}
-.timer-fill {
-  height: 100%; background: var(--text);
-  border-radius: 2px; transition: width 0.5s linear;
-}
 .focus-btns {
   display: flex; gap: 12px; width: 100%; max-width: 320px;
 }
@@ -400,8 +409,12 @@ body {
   <div class="focus-body">
     <div class="focus-task-title" id="focusTaskTitle"></div>
     <div class="focus-step-widget" id="focusStepWidget" style="display:none"></div>
-    <div class="timer-display" id="timerDisplay">00:00</div>
-    <div class="timer-track"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
+    <div class="timer-ring-wrap">
+      <div class="timer-ring" id="timerRing"></div>
+      <div class="timer-inner">
+        <div class="timer-display" id="timerDisplay">00:00</div>
+      </div>
+    </div>
     <div class="focus-btns">
       <button class="btn-start" id="timerStartBtn" onclick="toggleTimer()">▶ スタート</button>
       <button class="btn-complete" onclick="completeTask()">完了</button>
@@ -698,12 +711,18 @@ function toggleTimer() {
 }
 
 function updateTimerUI() {
-  const m = Math.floor(timerLeft / 60), s = timerLeft % 60;
+  const m   = Math.floor(timerLeft / 60), s = timerLeft % 60;
+  const pct = timerTotal > 0 ? (timerLeft / timerTotal * 100) : 0;
+  const urgent = timerLeft <= 60 && timerLeft > 0;
+  const color  = urgent ? 'var(--danger)' : '#e8553a';
+  const track  = '#e8e4de';
+
   const el = document.getElementById('timerDisplay');
-  el.textContent  = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  el.className    = 'timer-display' + (timerLeft <= 30 && timerLeft > 0 ? ' urgent' : '');
-  document.getElementById('timerFill').style.width =
-    (timerTotal > 0 ? timerLeft / timerTotal * 100 : 0) + '%';
+  el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  el.className   = 'timer-display' + (urgent ? ' urgent' : '');
+
+  document.getElementById('timerRing').style.background =
+    `conic-gradient(${color} ${pct}%, ${track} ${pct}%)`;
 }
 
 // ─── PWA ──────────────────────────────────────────────────────────
