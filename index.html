@@ -228,31 +228,32 @@ body {
   color: var(--text); margin-bottom: 24px;
   word-break: break-word; max-width: 340px;
 }
-.focus-steps {
+.focus-step-widget {
   width: 100%; max-width: 320px; margin-bottom: 32px;
-  display: flex; flex-direction: column; gap: 8px; text-align: left;
+  background: var(--card); border: 1.5px solid var(--border);
+  border-radius: 16px; padding: 18px 20px; text-align: left;
 }
-.focus-step {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px; background: var(--card);
-  border-radius: 10px; cursor: pointer;
-  border: 1.5px solid var(--border);
+.focus-step-counter {
+  font-size: 11px; font-weight: 700; letter-spacing: 2px;
+  color: var(--text2); text-transform: uppercase; margin-bottom: 10px;
+}
+.focus-step-text {
+  font-size: 17px; font-weight: 500; line-height: 1.5;
+  color: var(--text); margin-bottom: 16px; word-break: break-word;
+}
+.focus-step-next {
+  width: 100%; height: 44px;
+  background: var(--text); color: var(--bg);
+  border: none; border-radius: 50px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 15px; font-weight: 700; cursor: pointer;
   transition: opacity 0.15s;
 }
-.focus-step.done { opacity: 0.4; }
-.focus-step-check {
-  width: 22px; height: 22px; flex-shrink: 0;
-  border-radius: 50%; border: 2px solid var(--border-strong);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700;
+.focus-step-next:active { opacity: 0.8; }
+.focus-step-done-msg {
+  font-size: 15px; font-weight: 700; color: var(--text2);
+  text-align: center; padding: 8px 0;
 }
-.focus-step.done .focus-step-check {
-  background: var(--text); border-color: var(--text); color: var(--bg);
-}
-.focus-step-label {
-  font-size: 15px; line-height: 1.4; color: var(--text);
-}
-.focus-step.done .focus-step-label { text-decoration: line-through; color: var(--text2); }
 .timer-display {
   font-size: 76px; font-weight: 700; letter-spacing: 3px;
   line-height: 1; color: var(--text); margin-bottom: 18px;
@@ -367,7 +368,7 @@ body {
   <div class="focus-body">
     <div class="focus-group-label" id="focusGroupLabel"></div>
     <div class="focus-title" id="focusTitle"></div>
-    <div class="focus-steps" id="focusSteps"></div>
+    <div class="focus-step-widget" id="focusStepWidget" style="display:none"></div>
     <div class="timer-display" id="timerDisplay">00:00</div>
     <div class="timer-track"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
     <div class="focus-btns">
@@ -546,23 +547,8 @@ function startFocus(id) {
   document.getElementById('focusTitle').textContent      = t.title;
   document.getElementById('timerStartBtn').textContent   = '▶ スタート';
 
-  // スモールステップ描画
-  const stepsEl = document.getElementById('focusSteps');
-  const steps = t.steps || [];
-  if (steps.length > 0) {
-    stepsEl.innerHTML = steps.map((s, i) => {
-      const done  = s.done || false;
-      const label = typeof s === 'string' ? s : (s.title || '');
-      return `<div class="focus-step${done ? ' done' : ''}" onclick="toggleStep('${id}', ${i})">
-        <div class="focus-step-check">${done ? '✓' : ''}</div>
-        <div class="focus-step-label">${esc(label)}</div>
-      </div>`;
-    }).join('');
-    stepsEl.style.display = 'flex';
-  } else {
-    stepsEl.innerHTML = '';
-    stepsEl.style.display = 'none';
-  }
+  // スモールステップ描画（1件ずつ）
+  renderCurrentStep();
 
   timerTotal = (t.estimate || 30) * 60;
   timerLeft  = timerTotal;
@@ -570,18 +556,40 @@ function startFocus(id) {
   document.getElementById('screen-focus').classList.add('visible');
 }
 
-function toggleStep(taskId, stepIdx) {
-  const t = tasks.find(t => t.id === taskId);
-  if (!t || !t.steps || !t.steps[stepIdx]) return;
-  t.steps[stepIdx].done = !t.steps[stepIdx].done;
-  save();
-  // ステップ表示を更新
-  const stepEls = document.getElementById('focusSteps').querySelectorAll('.focus-step');
-  if (stepEls[stepIdx]) {
-    const done = t.steps[stepIdx].done;
-    stepEls[stepIdx].classList.toggle('done', done);
-    stepEls[stepIdx].querySelector('.focus-step-check').textContent = done ? '✓' : '';
+function renderCurrentStep() {
+  const widget = document.getElementById('focusStepWidget');
+  const t = tasks.find(t => t.id === focusId);
+  if (!t || !t.steps || t.steps.length === 0) {
+    widget.style.display = 'none';
+    return;
   }
+  const steps = t.steps;
+  const total = steps.length;
+  // 最初の未完了ステップを探す
+  const idx = steps.findIndex(s => !s.done);
+  widget.style.display = 'block';
+
+  if (idx === -1) {
+    // 全ステップ完了
+    widget.innerHTML = `<div class="focus-step-done-msg">✓ すべてのステップ完了</div>`;
+    return;
+  }
+  const label = typeof steps[idx] === 'string' ? steps[idx] : (steps[idx].title || '');
+  const doneCount = steps.filter(s => s.done).length;
+  widget.innerHTML = `
+    <div class="focus-step-counter">ステップ ${doneCount + 1} / ${total}</div>
+    <div class="focus-step-text">${esc(label)}</div>
+    <button class="focus-step-next" onclick="advanceStep()">完了して次へ →</button>`;
+}
+
+function advanceStep() {
+  const t = tasks.find(t => t.id === focusId);
+  if (!t || !t.steps) return;
+  const idx = t.steps.findIndex(s => !s.done);
+  if (idx === -1) return;
+  t.steps[idx].done = true;
+  save();
+  renderCurrentStep();
 }
 
 function completeTask() {
