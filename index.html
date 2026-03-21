@@ -745,20 +745,23 @@ renderMain();
 
 // クリップボードからインポート（ボタン押下時）
 async function importFromClipboard() {
-  let text;
-  try {
-    text = await navigator.clipboard.readText();
-  } catch {
-    text = prompt('JSONを貼り付けてください：');
-    if (!text) return;
-  }
+  // 1. クリップボードを試みる
+  let text = '';
+  try { text = await navigator.clipboard.readText(); } catch { /* 権限なし → promptへ */ }
 
+  // 2. クリップボードの内容がJSONでなければpromptにフォールバック
   let parsed;
   try {
     parsed = JSON.parse(text);
   } catch {
-    alert('JSONとして読み込めませんでした。');
-    return;
+    text = prompt('JSONを貼り付けてください：');
+    if (!text) return;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      alert('JSONとして読み込めませんでした。');
+      return;
+    }
   }
 
   if (!Array.isArray(parsed) || parsed.length === 0) {
