@@ -737,7 +737,11 @@ function updateTimerUI() {
 }
 
 // ─── PWA ──────────────────────────────────────────────────────────
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+if ('serviceWorker' in navigator) {
+  // 新しいSWがアクティブになったら自動リロード（キャッシュ更新を即反映）
+  navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
 
 // ─── INIT ─────────────────────────────────────────────────────────
 save();
