@@ -48,7 +48,7 @@ body {
 
 @keyframes slideInRight {
   from { transform: translateX(28px); opacity: 0; }
-  to   { transform: none;             opacity: 1; }
+  to   { transform: translateX(0);    opacity: 1; }
 }
 #screen-group.visible,
 #screen-focus.visible { animation: slideInRight 0.22s ease-out; }
@@ -225,9 +225,34 @@ body {
 }
 .focus-title {
   font-size: 24px; font-weight: 700; line-height: 1.45;
-  color: var(--text); margin-bottom: 52px;
+  color: var(--text); margin-bottom: 24px;
   word-break: break-word; max-width: 340px;
 }
+.focus-steps {
+  width: 100%; max-width: 320px; margin-bottom: 32px;
+  display: flex; flex-direction: column; gap: 8px; text-align: left;
+}
+.focus-step {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: var(--card);
+  border-radius: 10px; cursor: pointer;
+  border: 1.5px solid var(--border);
+  transition: opacity 0.15s;
+}
+.focus-step.done { opacity: 0.4; }
+.focus-step-check {
+  width: 22px; height: 22px; flex-shrink: 0;
+  border-radius: 50%; border: 2px solid var(--border-strong);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+}
+.focus-step.done .focus-step-check {
+  background: var(--text); border-color: var(--text); color: var(--bg);
+}
+.focus-step-label {
+  font-size: 15px; line-height: 1.4; color: var(--text);
+}
+.focus-step.done .focus-step-label { text-decoration: line-through; color: var(--text2); }
 .timer-display {
   font-size: 76px; font-weight: 700; letter-spacing: 3px;
   line-height: 1; color: var(--text); margin-bottom: 18px;
@@ -342,6 +367,7 @@ body {
   <div class="focus-body">
     <div class="focus-group-label" id="focusGroupLabel"></div>
     <div class="focus-title" id="focusTitle"></div>
+    <div class="focus-steps" id="focusSteps"></div>
     <div class="timer-display" id="timerDisplay">00:00</div>
     <div class="timer-track"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
     <div class="focus-btns">
@@ -520,10 +546,42 @@ function startFocus(id) {
   document.getElementById('focusTitle').textContent      = t.title;
   document.getElementById('timerStartBtn').textContent   = '▶ スタート';
 
+  // スモールステップ描画
+  const stepsEl = document.getElementById('focusSteps');
+  const steps = t.steps || [];
+  if (steps.length > 0) {
+    stepsEl.innerHTML = steps.map((s, i) => {
+      const done  = s.done || false;
+      const label = typeof s === 'string' ? s : (s.title || '');
+      return `<div class="focus-step${done ? ' done' : ''}" onclick="toggleStep('${id}', ${i})">
+        <div class="focus-step-check">${done ? '✓' : ''}</div>
+        <div class="focus-step-label">${esc(label)}</div>
+      </div>`;
+    }).join('');
+    stepsEl.style.display = 'flex';
+  } else {
+    stepsEl.innerHTML = '';
+    stepsEl.style.display = 'none';
+  }
+
   timerTotal = (t.estimate || 30) * 60;
   timerLeft  = timerTotal;
   updateTimerUI();
   document.getElementById('screen-focus').classList.add('visible');
+}
+
+function toggleStep(taskId, stepIdx) {
+  const t = tasks.find(t => t.id === taskId);
+  if (!t || !t.steps || !t.steps[stepIdx]) return;
+  t.steps[stepIdx].done = !t.steps[stepIdx].done;
+  save();
+  // ステップ表示を更新
+  const stepEls = document.getElementById('focusSteps').querySelectorAll('.focus-step');
+  if (stepEls[stepIdx]) {
+    const done = t.steps[stepIdx].done;
+    stepEls[stepIdx].classList.toggle('done', done);
+    stepEls[stepIdx].querySelector('.focus-step-check').textContent = done ? '✓' : '';
+  }
 }
 
 function completeTask() {
