@@ -217,11 +217,12 @@ body {
 .focus-body {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  padding: 20px 28px 48px; text-align: center;
+  padding: 12px 24px 32px; text-align: center;
+  gap: 0;
 }
 .focus-task-title {
-  font-size: 13px; font-weight: 500; color: var(--text2);
-  margin-bottom: 20px; line-height: 1.4; word-break: break-word;
+  font-size: 12px; font-weight: 500; color: var(--text2);
+  margin-bottom: 12px; line-height: 1.4; word-break: break-word;
   max-width: 100%;
 }
 /* ステップ一覧ドロワー */
@@ -261,35 +262,35 @@ body {
   text-decoration: line-through; color: var(--text2);
 }
 .focus-step-widget {
-  width: 100%; margin-bottom: 36px;
+  width: 100%; margin-bottom: 16px;
   background: var(--card); border: 1.5px solid var(--border);
-  border-radius: 20px; padding: 24px 24px 20px; text-align: left;
+  border-radius: 18px; padding: 16px 18px 14px; text-align: left;
 }
 .focus-step-counter {
-  font-size: 12px; font-weight: 700; letter-spacing: 2px;
-  color: var(--text2); text-transform: uppercase; margin-bottom: 14px;
+  font-size: 11px; font-weight: 700; letter-spacing: 2px;
+  color: var(--text2); text-transform: uppercase; margin-bottom: 10px;
 }
 .focus-step-text {
-  font-size: 28px; font-weight: 700; line-height: 1.4;
-  color: var(--text); margin-bottom: 24px; word-break: break-word;
+  font-size: 24px; font-weight: 700; line-height: 1.4;
+  color: var(--text); margin-bottom: 14px; word-break: break-word;
 }
 .focus-step-next {
-  width: 100%; height: 52px;
+  width: 100%; height: 44px;
   background: var(--text); color: var(--bg);
   border: none; border-radius: 50px;
   font-family: 'Noto Sans JP', sans-serif;
-  font-size: 17px; font-weight: 700; cursor: pointer;
+  font-size: 15px; font-weight: 700; cursor: pointer;
   transition: opacity 0.15s;
 }
 .focus-step-next:active { opacity: 0.8; }
 .focus-step-done-msg {
-  font-size: 16px; font-weight: 700; color: var(--text2);
-  text-align: center; padding: 8px 0;
+  font-size: 15px; font-weight: 700; color: var(--text2);
+  text-align: center; padding: 6px 0;
 }
 .timer-ring-wrap {
   position: relative;
-  width: 220px; height: 220px;
-  margin-bottom: 36px; flex-shrink: 0;
+  width: 180px; height: 180px;
+  margin-bottom: 20px; flex-shrink: 0;
 }
 .timer-ring {
   position: absolute; inset: 0;
@@ -299,31 +300,30 @@ body {
 }
 .timer-inner {
   position: absolute;
-  inset: 22px;
+  inset: 18px;
   background: var(--bg);
   border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
+.timer-inner:active { opacity: 0.75; }
 .timer-display {
-  font-size: 52px; font-weight: 700; letter-spacing: 1px;
+  font-size: 44px; font-weight: 700; letter-spacing: 1px;
   line-height: 1; color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 .timer-display.urgent { color: var(--danger); }
+.timer-hint {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  color: var(--text2); margin-top: 6px; text-transform: uppercase;
+}
 .focus-btns {
-  display: flex; gap: 12px; width: 100%; max-width: 320px;
+  width: 100%; max-width: 280px;
 }
-.btn-start {
-  flex: 1; height: 56px;
-  background: var(--text); color: var(--bg);
-  border: none; border-radius: 50px;
-  font-family: 'Noto Sans JP', sans-serif;
-  font-size: 16px; font-weight: 700; cursor: pointer;
-  transition: opacity 0.15s;
-}
-.btn-start:active { opacity: 0.8; }
 .btn-complete {
-  height: 56px; padding: 0 22px;
+  width: 100%; height: 52px; padding: 0;
   background: transparent; color: var(--text2);
   border: 1.5px solid var(--border-strong); border-radius: 50px;
   font-family: 'Noto Sans JP', sans-serif;
@@ -411,13 +411,13 @@ body {
     <div class="focus-step-widget" id="focusStepWidget" style="display:none"></div>
     <div class="timer-ring-wrap">
       <div class="timer-ring" id="timerRing"></div>
-      <div class="timer-inner">
+      <div class="timer-inner" onclick="toggleTimer()">
         <div class="timer-display" id="timerDisplay">00:00</div>
+        <div class="timer-hint" id="timerHint">タップで開始</div>
       </div>
     </div>
     <div class="focus-btns">
-      <button class="btn-start" id="timerStartBtn" onclick="toggleTimer()">▶ スタート</button>
-      <button class="btn-complete" onclick="completeTask()">完了</button>
+      <button class="btn-complete" onclick="completeTask()">タスク完了</button>
     </div>
   </div>
 </div>
@@ -586,7 +586,7 @@ function startFocus(id) {
   focusId = id;
   stopTimer();
 
-  document.getElementById('timerStartBtn').textContent = '▶ スタート';
+  document.getElementById('timerHint').textContent = 'タップで開始';
   document.getElementById('focusTaskTitle').textContent = t.title;
 
   // スモールステップ描画（1件ずつ）
@@ -691,19 +691,20 @@ function stopTimer() {
 }
 
 function toggleTimer() {
+  const hint = document.getElementById('timerHint');
   if (timerRunning) {
     stopTimer();
-    document.getElementById('timerStartBtn').textContent = '▶ 再開';
+    hint.textContent = 'タップで再開';
   } else {
     if (timerLeft <= 0) timerLeft = timerTotal;
     timerRunning = true;
-    document.getElementById('timerStartBtn').textContent = '⏸ 一時停止';
+    hint.textContent = 'タップで一時停止';
     timerTick = setInterval(() => {
       timerLeft--;
       updateTimerUI();
       if (timerLeft <= 0) {
         stopTimer();
-        document.getElementById('timerStartBtn').textContent = '▶ スタート';
+        hint.textContent = 'タップで開始';
         toast('⏰ 時間になりました！');
       }
     }, 1000);
