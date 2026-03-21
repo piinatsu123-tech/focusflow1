@@ -219,39 +219,30 @@ body {
   align-items: center; justify-content: center;
   padding: 32px 32px 48px; text-align: center;
 }
-.focus-group-label {
-  font-size: 11px; font-weight: 700; letter-spacing: 2.5px;
-  color: var(--text2); text-transform: uppercase; margin-bottom: 16px;
-}
-.focus-title {
-  font-size: 24px; font-weight: 700; line-height: 1.45;
-  color: var(--text); margin-bottom: 24px;
-  word-break: break-word; max-width: 340px;
-}
 .focus-step-widget {
-  width: 100%; max-width: 320px; margin-bottom: 32px;
+  width: 100%; margin-bottom: 36px;
   background: var(--card); border: 1.5px solid var(--border);
-  border-radius: 16px; padding: 18px 20px; text-align: left;
+  border-radius: 20px; padding: 24px 24px 20px; text-align: left;
 }
 .focus-step-counter {
-  font-size: 11px; font-weight: 700; letter-spacing: 2px;
-  color: var(--text2); text-transform: uppercase; margin-bottom: 10px;
+  font-size: 12px; font-weight: 700; letter-spacing: 2px;
+  color: var(--text2); text-transform: uppercase; margin-bottom: 14px;
 }
 .focus-step-text {
-  font-size: 17px; font-weight: 500; line-height: 1.5;
-  color: var(--text); margin-bottom: 16px; word-break: break-word;
+  font-size: 28px; font-weight: 700; line-height: 1.4;
+  color: var(--text); margin-bottom: 24px; word-break: break-word;
 }
 .focus-step-next {
-  width: 100%; height: 44px;
+  width: 100%; height: 52px;
   background: var(--text); color: var(--bg);
   border: none; border-radius: 50px;
   font-family: 'Noto Sans JP', sans-serif;
-  font-size: 15px; font-weight: 700; cursor: pointer;
+  font-size: 17px; font-weight: 700; cursor: pointer;
   transition: opacity 0.15s;
 }
 .focus-step-next:active { opacity: 0.8; }
 .focus-step-done-msg {
-  font-size: 15px; font-weight: 700; color: var(--text2);
+  font-size: 16px; font-weight: 700; color: var(--text2);
   text-align: center; padding: 8px 0;
 }
 .timer-display {
@@ -366,8 +357,6 @@ body {
     <div class="header-title">集中モード</div>
   </div>
   <div class="focus-body">
-    <div class="focus-group-label" id="focusGroupLabel"></div>
-    <div class="focus-title" id="focusTitle"></div>
     <div class="focus-step-widget" id="focusStepWidget" style="display:none"></div>
     <div class="timer-display" id="timerDisplay">00:00</div>
     <div class="timer-track"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
@@ -542,10 +531,7 @@ function startFocus(id) {
   focusId = id;
   stopTimer();
 
-  const cfg = GROUP_CONFIG.find(g => g.urgency === t.urgency);
-  document.getElementById('focusGroupLabel').textContent = cfg ? cfg.title : '';
-  document.getElementById('focusTitle').textContent      = t.title;
-  document.getElementById('timerStartBtn').textContent   = '▶ スタート';
+  document.getElementById('timerStartBtn').textContent = '▶ スタート';
 
   // スモールステップ描画（1件ずつ）
   renderCurrentStep();
@@ -579,7 +565,7 @@ function renderCurrentStep() {
   widget.innerHTML = `
     <div class="focus-step-counter">ステップ ${doneCount + 1} / ${total}</div>
     <div class="focus-step-text">${esc(label)}</div>
-    <button class="focus-step-next" onclick="advanceStep()">完了して次へ →</button>`;
+    <button class="focus-step-next" onclick="advanceStep()">完了</button>`;
 }
 
 function advanceStep() {
