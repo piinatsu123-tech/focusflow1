@@ -722,12 +722,14 @@ function updateTimerUI() {
   el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   el.className   = 'timer-display' + (urgent ? ' urgent' : '');
 
+  // 経過分をgray、残り分をredにすることでドットが時計回りに動く
+  const elapsed = 100 - pct;
   document.getElementById('timerRing').style.background =
-    `conic-gradient(${color} ${pct}%, ${track} ${pct}%)`;
+    `conic-gradient(${track} ${elapsed}%, ${color} ${elapsed}%)`;
 
   const dot = document.getElementById('timerDot');
   if (dot) {
-    dot.setAttribute('transform', `rotate(${pct * 3.6},90,90)`);
+    dot.setAttribute('transform', `rotate(${elapsed * 3.6},90,90)`);
     dot.style.opacity = pct > 1 ? '1' : '0';
   }
 }
