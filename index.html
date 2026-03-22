@@ -469,7 +469,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v1.3';
+const APP_VERSION = 'v1.4';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -809,10 +809,9 @@ renderMain();
 // クォート正規化（アプリ版Claude対策）
 function normalizeQuotes(text) {
   return text
-    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')  // 各種ダブルクォート
-    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")  // 各種シングルクォート
-    .replace(/[\uFF02]/g, '"')   // 全角ダブルクォート
-    .replace(/[\uFF07]/g, "'");  // 全角シングルクォート
+    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036\uFF02]/g, '"')
+    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035\uFF07]/g, "'")
+    .trim();
 }
 
 // クリップボードからインポート（ボタン押下時）
