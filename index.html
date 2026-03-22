@@ -95,6 +95,19 @@ body {
 .date-badge {
   font-size: 13px; color: var(--text2); margin-top: 5px;
 }
+.version-badge {
+  font-size: 10px; font-weight: 700; color: var(--text3);
+  letter-spacing: 1px; margin-top: 2px;
+}
+.focus-step-start {
+  width: 100%; height: 44px;
+  background: transparent; color: var(--text);
+  border: 2px solid var(--text); border-radius: 50px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  transition: opacity 0.15s;
+}
+.focus-step-start:active { opacity: 0.6; }
 
 /* ── TIME BAR ── */
 .time-bar-wrap {
@@ -359,6 +372,7 @@ body {
   <div class="main-header">
     <div class="app-title">FocusFlow</div>
     <div class="date-badge" id="dateBadge"></div>
+    <div class="version-badge" id="versionBadge"></div>
   </div>
 
   <div class="time-bar-wrap">
@@ -435,6 +449,9 @@ function migrateTasks(list) {
   });
 }
 
+// ─── VERSION ─────────────────────────────────────────────────────
+const APP_VERSION = 'v1.2';
+
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
 let currentUrgency = null;
@@ -478,6 +495,7 @@ function calcTimeBar() {
 function renderMain() {
   document.getElementById('dateBadge').textContent =
     new Date().toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', weekday: 'short' });
+  document.getElementById('versionBadge').textContent = APP_VERSION;
   calcTimeBar();
 
   const incomplete = tasks.filter(t => !t.done);
@@ -612,12 +630,15 @@ function renderCurrentStep() {
   }
   const label = typeof steps[idx] === 'string' ? steps[idx] : (steps[idx].title || '');
   const doneCount = steps.filter(s => s.done).length;
+  const btn = timerRunning
+    ? `<button class="focus-step-next" onclick="advanceStep()">完了</button>`
+    : `<button class="focus-step-start" onclick="startStep()">スタート</button>`;
   widget.innerHTML = `
     <div class="focus-step-counter" onclick="showStepList()" style="cursor:pointer">
       ステップ ${doneCount + 1} / ${total} &#8250;
     </div>
     <div class="focus-step-text">${esc(label)}</div>
-    <button class="focus-step-next" onclick="advanceStep()">完了</button>`;
+    ${btn}`;
 }
 
 function showStepList() {
@@ -643,7 +664,15 @@ function showStepList() {
   document.body.appendChild(overlay);
 }
 
+function startStep() {
+  if (!timerRunning) toggleTimer(); // タイマースタート
+  renderCurrentStep();              // ボタンを「完了」に切り替え
+}
+
 function advanceStep() {
+  stopTimer();                       // タイマーを止めてリセット
+  timerLeft = timerTotal;
+  updateTimerUI();
   const t = tasks.find(t => t.id === focusId);
   if (!t || !t.steps) return;
   const idx = t.steps.findIndex(s => !s.done);
@@ -652,10 +681,10 @@ function advanceStep() {
   save();
   // 全ステップ完了なら自動でタスク完了
   if (t.steps.every(s => s.done)) {
-    renderCurrentStep(); // "すべてのステップ完了" を一瞬表示
+    renderCurrentStep();
     setTimeout(() => completeTask(), 800);
   } else {
-    renderCurrentStep();
+    renderCurrentStep(); // 次のステップを「スタート」ボタンで表示
   }
 }
 
