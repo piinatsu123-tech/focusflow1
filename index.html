@@ -774,6 +774,15 @@ if ('serviceWorker' in navigator) {
 save();
 renderMain();
 
+// クォート正規化（アプリ版Claude対策）
+function normalizeQuotes(text) {
+  return text
+    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')  // 各種ダブルクォート
+    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")  // 各種シングルクォート
+    .replace(/[\uFF02]/g, '"')   // 全角ダブルクォート
+    .replace(/[\uFF07]/g, "'");  // 全角シングルクォート
+}
+
 // クリップボードからインポート（ボタン押下時）
 async function importFromClipboard() {
   // 1. クリップボードを試みる
@@ -783,13 +792,13 @@ async function importFromClipboard() {
   // 2. クリップボードの内容がJSONでなければpromptにフォールバック
   let parsed;
   try {
-    parsed = JSON.parse(text);
+    parsed = JSON.parse(normalizeQuotes(text));
   } catch {
     text = prompt('JSONを貼り付けてください：');
     if (!text) return;
     text = text.trim();
     try {
-      parsed = JSON.parse(text);
+      parsed = JSON.parse(normalizeQuotes(text));
     } catch {
       alert('JSONとして読み込めませんでした。');
       return;
