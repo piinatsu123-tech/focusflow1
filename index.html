@@ -433,24 +433,43 @@ body {
 <div class="toast" id="toast"></div>
 
 <script>
+// ─── HELPERS ─────────────────────────────────────────────────────
+// stepのラベル（新: text / 旧: title / 文字列）
+function stepLabel(s) {
+  if (typeof s === 'string') return s;
+  return s.text || s.title || '';
+}
+// stepの見積もり分数
+function stepMinutes(s) {
+  if (!s || typeof s !== 'object') return 0;
+  return s.estimatedMinutes || 0;
+}
+// タスク全体の見積もり（stepsの合計 or t.estimate）
+function taskEstimate(t) {
+  const fromSteps = (t.steps || []).reduce((sum, s) => sum + stepMinutes(s), 0);
+  return fromSteps > 0 ? fromSteps : (t.estimate || 30);
+}
+
 // ─── MIGRATION ───────────────────────────────────────────────────
 function migrateTasks(list) {
-  const urgencyMap = { must: 'must', want: 'want', idea: 'nice' };
+  const urgencyMap  = { must: 'must', want: 'want', idea: 'nice' };
+  const priorityMap = { high: 'must', medium: 'want', low: 'nice' };
   return list.map(t => {
-    if ('type' in t) {
-      return { id: t.id, done: t.done, title: t.title,
-               urgency: urgencyMap[t.type] || 'want',
-               estimate: t.estimate || 30,
-               steps: t.steps || [], createdAt: t.createdAt };
-    }
-    if (!t.urgency)  t.urgency  = 'want';
-    if (!t.estimate) t.estimate = 30;
+    if (!t.id) t.id = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+    t.done    = t.done || false;
+    t.urgency = t.urgency || urgencyMap[t.type] || priorityMap[t.priority] || 'want';
+    // steps を内部フォーマット（text/done/estimatedMinutes）に統一
+    t.steps = (t.steps || []).map(s => typeof s === 'string'
+      ? { text: s, done: false, estimatedMinutes: 0 }
+      : { text: s.text || s.title || '', done: s.done || false,
+          estimatedMinutes: s.estimatedMinutes || 0 });
+    t.estimate = taskEstimate(t);
     return t;
   });
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v1.2';
+const APP_VERSION = 'v1.3';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -482,8 +501,8 @@ function toast(msg) {
 
 // ─── TIME BAR ────────────────────────────────────────────────────
 function calcTimeBar() {
-  const totalMin = tasks.reduce((s, t) => s + (t.estimate || 30), 0);
-  const remMin   = tasks.filter(t => !t.done).reduce((s, t) => s + (t.estimate || 30), 0);
+  const totalMin = tasks.reduce((s, t) => s + taskEstimate(t), 0);
+  const remMin   = tasks.filter(t => !t.done).reduce((s, t) => s + taskEstimate(t), 0);
   const doneMin  = totalMin - remMin;
   document.getElementById('timeBarRemaining').textContent = (remMin / 60).toFixed(1);
   document.getElementById('timeBarTotal').textContent     = '/ ' + (totalMin / 60).toFixed(1) + 'h';
@@ -510,7 +529,7 @@ function renderMain() {
   GROUP_CONFIG.forEach(({ urgency, title }) => {
     const list   = tasks.filter(t => !t.done && t.urgency === urgency);
     const count  = list.length;
-    const estMin = list.reduce((s, t) => s + (t.estimate || 30), 0);
+    const estMin = list.reduce((s, t) => s + taskEstimate(t), 0);
     const estStr = count > 0
       ? (estMin >= 60 ? (estMin / 60).toFixed(1) + 'h' : estMin + '分')
       : '';
@@ -541,7 +560,7 @@ function showGroup(urgency) {
   const cfg = GROUP_CONFIG.find(g => g.urgency === urgency);
   const list = tasks.filter(t => !t.done && t.urgency === urgency);
 
-  const estMin = list.reduce((s, t) => s + (t.estimate || 30), 0);
+  const estMin = list.reduce((s, t) => s + taskEstimate(t), 0);
   const estStr = estMin >= 60 ? (estMin / 60).toFixed(1) + 'h' : estMin + '分';
 
   document.getElementById('groupHeaderTitle').textContent = cfg.title;
@@ -566,7 +585,7 @@ function taskCardHTML(t) {
   return `<div class="task-card" data-urgency="${t.urgency || 'want'}" onclick="selectTask('${t.id}')">
     <div class="task-card-body">
       <div class="task-card-title">${esc(t.title)}</div>
-      <div class="task-card-meta">${t.estimate || 30}分</div>
+      <div class="task-card-meta">${taskEstimate(t)}分</div>
     </div>
     <button class="check-btn" onclick="event.stopPropagation();toggleDone('${t.id}')">${t.done ? '✓' : ''}</button>
   </div>`;
@@ -604,7 +623,10 @@ function startFocus(id) {
   // スモールステップ描画（1件ずつ）
   renderCurrentStep();
 
-  timerTotal = (t.estimate || 30) * 60;
+  // 最初の未完了ステップの estimatedMinutes をタイマーにセット、なければタスク全体の見積もり
+  const firstStep = (t.steps || []).find(s => !s.done);
+  const mins = (firstStep && stepMinutes(firstStep) > 0) ? stepMinutes(firstStep) : taskEstimate(t);
+  timerTotal = mins * 60;
   timerLeft  = timerTotal;
   updateTimerUI();
   document.getElementById('screen-focus').classList.add('visible');
@@ -628,8 +650,11 @@ function renderCurrentStep() {
     widget.innerHTML = `<div class="focus-step-done-msg">✓ すべてのステップ完了</div>`;
     return;
   }
-  const label = typeof steps[idx] === 'string' ? steps[idx] : (steps[idx].title || '');
+  const step = steps[idx];
+  const label = stepLabel(step);
+  const mins  = stepMinutes(step);
   const doneCount = steps.filter(s => s.done).length;
+  const metaStr = mins > 0 ? `<div style="font-size:12px;color:var(--text3);margin-bottom:10px;">${mins}分</div>` : '';
   const btn = timerRunning
     ? `<button class="focus-step-next" onclick="advanceStep()">完了</button>`
     : `<button class="focus-step-start" onclick="startStep()">スタート</button>`;
@@ -638,6 +663,7 @@ function renderCurrentStep() {
       ステップ ${doneCount + 1} / ${total} &#8250;
     </div>
     <div class="focus-step-text">${esc(label)}</div>
+    ${metaStr}
     ${btn}`;
 }
 
@@ -645,11 +671,13 @@ function showStepList() {
   const t = tasks.find(t => t.id === focusId);
   if (!t || !t.steps) return;
   const items = t.steps.map((s, i) => {
-    const done  = s.done || false;
-    const label = typeof s === 'string' ? s : (s.title || '');
+    const done  = typeof s === 'object' ? (s.done || false) : false;
+    const label = stepLabel(s);
+    const mins  = stepMinutes(s);
+    const minsStr = mins > 0 ? ` <span style="font-size:12px;color:var(--text3);margin-left:6px;">${mins}分</span>` : '';
     return `<div class="step-list-item${done ? ' done' : ''}">
       <div class="step-list-check">${done ? '✓' : ''}</div>
-      <div class="step-list-label">${esc(label)}</div>
+      <div class="step-list-label">${esc(label)}${minsStr}</div>
     </div>`;
   }).join('');
   const overlay = document.createElement('div');
@@ -670,9 +698,7 @@ function startStep() {
 }
 
 function advanceStep() {
-  stopTimer();                       // タイマーを止めてリセット
-  timerLeft = timerTotal;
-  updateTimerUI();
+  stopTimer();
   const t = tasks.find(t => t.id === focusId);
   if (!t || !t.steps) return;
   const idx = t.steps.findIndex(s => !s.done);
@@ -684,6 +710,12 @@ function advanceStep() {
     renderCurrentStep();
     setTimeout(() => completeTask(), 800);
   } else {
+    // 次のステップの estimatedMinutes をタイマーにセット
+    const nextStep = t.steps.find(s => !s.done);
+    const mins = (nextStep && stepMinutes(nextStep) > 0) ? stepMinutes(nextStep) : taskEstimate(t);
+    timerTotal = mins * 60;
+    timerLeft  = timerTotal;
+    updateTimerUI();
     renderCurrentStep(); // 次のステップを「スタート」ボタンで表示
   }
 }
@@ -810,11 +842,19 @@ async function importFromClipboard() {
     return;
   }
 
-  const urgencyMap = { must: 'must', want: 'want', idea: 'nice' };
+  const urgMap = { must: 'must', want: 'want', idea: 'nice' };
+  const priMap = { high: 'must', medium: 'want', low: 'nice' };
   parsed.forEach(t => {
-    const steps   = (t.steps || []).map(s => typeof s === 'string' ? { title: s, done: false } : s);
-    const urgency = t.urgency || urgencyMap[t.type] || 'want';
-    addTask({ ...t, urgency, estimate: t.estimate || 30, steps, done: false });
+    // steps を内部フォーマット（text/done/estimatedMinutes）に統一
+    const steps = (t.steps || []).map(s => typeof s === 'string'
+      ? { text: s, done: false, estimatedMinutes: 0 }
+      : { text: s.text || s.title || '', done: s.done || false,
+          estimatedMinutes: s.estimatedMinutes || 0 });
+    const urgency = t.urgency || urgMap[t.type] || priMap[t.priority] || 'want';
+    // stepsに見積もりがあればその合計、なければ t.estimate or 30
+    const fromSteps = steps.reduce((sum, s) => sum + (s.estimatedMinutes || 0), 0);
+    const estimate  = fromSteps > 0 ? fromSteps : (t.estimate || 30);
+    addTask({ ...t, urgency, estimate, steps, done: false });
   });
   renderMain();
   toast('✓ ' + parsed.length + '件のタスクをインポートしました');
