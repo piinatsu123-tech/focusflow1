@@ -364,6 +364,73 @@ body {
 }
 .import-btn:active { opacity: 0.6; }
 
+/* ── EDIT SCREEN ── */
+.edit-section { padding: 20px 20px 0; }
+.edit-section-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  color: var(--text3); text-transform: uppercase; margin-bottom: 10px;
+}
+.edit-task-title {
+  font-size: 18px; font-weight: 700; color: var(--text);
+  line-height: 1.4; word-break: break-word;
+}
+.urgency-pills { display: flex; gap: 8px; }
+.urgency-pill {
+  flex: 1; height: 40px; border-radius: 50px;
+  border: 1.5px solid var(--border-strong);
+  background: none; cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px; font-weight: 700; color: var(--text2);
+  transition: all 0.15s;
+}
+.urgency-pill.active-must { background: var(--must); border-color: var(--must); color: #fff; }
+.urgency-pill.active-want { background: var(--text); border-color: var(--text); color: var(--bg); }
+.urgency-pill.active-nice { background: var(--text2); border-color: var(--text2); color: var(--bg); }
+.step-edit-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; padding-bottom: 120px; }
+.step-edit-item {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--card); border-radius: 10px;
+  padding: 10px 12px;
+}
+.step-edit-text {
+  flex: 1; border: none; background: none; outline: none;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 15px; color: var(--text); min-width: 0;
+}
+.step-edit-mins {
+  width: 48px; border: none; border-bottom: 1.5px solid var(--border-strong);
+  background: none; outline: none; text-align: center;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px; color: var(--text2); flex-shrink: 0;
+}
+.step-edit-mins::placeholder { color: var(--text3); }
+.step-edit-del {
+  width: 32px; height: 32px; border: none; background: none;
+  cursor: pointer; color: var(--text3); font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; border-radius: 50%;
+}
+.step-edit-del:active { background: rgba(0,0,0,.07); }
+.add-step-btn {
+  width: 100%; height: 44px; border-radius: 10px;
+  border: 1.5px dashed var(--border-strong);
+  background: none; cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px; color: var(--text2);
+  margin-top: 8px;
+}
+.edit-save-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  padding: 12px 20px 28px; background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+.edit-save-btn {
+  width: 100%; height: 50px; border-radius: 50px;
+  border: none; background: var(--text); color: var(--bg);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+}
+
 /* ── TOAST ── */
 .toast {
   position: fixed; top: 20px; left: 50%;
@@ -443,6 +510,36 @@ body {
 
 <div class="toast" id="toast"></div>
 
+<!-- ════ SCREEN: EDIT ════ -->
+<div class="screen" id="screen-edit" style="z-index:40;">
+  <div class="screen-header">
+    <button class="back-btn" onclick="closeEditScreen()">‹</button>
+    <div class="header-title">タスクを編集</div>
+  </div>
+  <div class="scroll" id="editScroll">
+    <div class="edit-section">
+      <div class="edit-section-label">タスク</div>
+      <div class="edit-task-title" id="editTaskTitle"></div>
+    </div>
+    <div class="edit-section" style="margin-top:20px;">
+      <div class="edit-section-label">優先度</div>
+      <div class="urgency-pills">
+        <button class="urgency-pill" id="pill-must" onclick="selectUrgency('must')">今日中に絶対</button>
+        <button class="urgency-pill" id="pill-want" onclick="selectUrgency('want')">できたら</button>
+        <button class="urgency-pill" id="pill-nice" onclick="selectUrgency('nice')">余力があれば</button>
+      </div>
+    </div>
+    <div class="edit-section" style="margin-top:20px;">
+      <div class="edit-section-label">ステップ（左：内容　右：分数）</div>
+      <div class="step-edit-list" id="stepEditList"></div>
+      <button class="add-step-btn" onclick="addEditStep()">＋ ステップを追加</button>
+    </div>
+  </div>
+  <div class="edit-save-bar">
+    <button class="edit-save-btn" onclick="saveEdit()">保存</button>
+  </div>
+</div>
+
 <script>
 // ─── HELPERS ─────────────────────────────────────────────────────
 // stepのラベル（新: text / 旧: title / 文字列）
@@ -480,7 +577,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v1.7';
+const APP_VERSION = 'v1.8';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -756,7 +853,11 @@ function showStepList() {
   const overlay = document.createElement('div');
   overlay.className = 'step-list-overlay';
   overlay.innerHTML = `<div class="step-list-sheet">
-    <div class="step-list-title">すべてのステップ</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="step-list-title" style="margin-bottom:0;">すべてのステップ</div>
+      <button onclick="document.querySelector('.step-list-overlay').remove();openEditScreen('${t.id}')"
+        style="border:none;background:none;font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:700;color:var(--text);cursor:pointer;padding:4px 8px;">編集 ›</button>
+    </div>
     ${items}
   </div>`;
   overlay.addEventListener('click', e => {
@@ -868,7 +969,92 @@ function updateTimerUI() {
   }
 }
 
-// ─── PWA ──────────────────────────────────────────────────────────
+// ─── EDIT SCREEN ─────────────────────────────────────────────────
+let editId = null;
+let editUrgency = 'want';
+
+function openEditScreen(id) {
+  editId = id;
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  editUrgency = t.urgency || 'want';
+  document.getElementById('editTaskTitle').textContent = t.title;
+  selectUrgency(editUrgency);
+  renderEditSteps(t.steps || []);
+  document.getElementById('screen-edit').classList.add('visible');
+}
+
+function closeEditScreen() {
+  document.getElementById('screen-edit').classList.remove('visible');
+  editId = null;
+}
+
+function selectUrgency(u) {
+  editUrgency = u;
+  ['must','want','nice'].forEach(x => {
+    const el = document.getElementById('pill-' + x);
+    el.className = 'urgency-pill' + (x === u ? ' active-' + x : '');
+  });
+}
+
+function renderEditSteps(steps) {
+  const el = document.getElementById('stepEditList');
+  el.innerHTML = steps.map((s, i) => {
+    const text = stepLabel(s);
+    const mins = stepMinutes(s) || '';
+    return `<div class="step-edit-item" data-idx="${i}">
+      <input class="step-edit-text" value="${esc(text)}" placeholder="ステップの内容">
+      <input class="step-edit-mins" type="number" value="${mins}" placeholder="分" min="0">
+      <button class="step-edit-del" onclick="deleteEditStep(${i})">×</button>
+    </div>`;
+  }).join('');
+}
+
+function addEditStep() {
+  const el = document.getElementById('stepEditList');
+  const idx = el.children.length;
+  const div = document.createElement('div');
+  div.className = 'step-edit-item';
+  div.dataset.idx = idx;
+  div.innerHTML = `
+    <input class="step-edit-text" value="" placeholder="ステップの内容">
+    <input class="step-edit-mins" type="number" value="" placeholder="分" min="0">
+    <button class="step-edit-del" onclick="deleteEditStep(${idx})">×</button>`;
+  el.appendChild(div);
+  div.querySelector('.step-edit-text').focus();
+}
+
+function deleteEditStep(idx) {
+  const el = document.getElementById('stepEditList');
+  const item = el.querySelector(`[data-idx="${idx}"]`);
+  if (item) item.remove();
+  // idx を振り直す
+  [...el.children].forEach((c, i) => {
+    c.dataset.idx = i;
+    c.querySelector('.step-edit-del').setAttribute('onclick', `deleteEditStep(${i})`);
+  });
+}
+
+function saveEdit() {
+  const t = tasks.find(t => t.id === editId);
+  if (!t) return;
+  t.urgency = editUrgency;
+  const items = document.querySelectorAll('#stepEditList .step-edit-item');
+  t.steps = [...items].map(item => {
+    const text = item.querySelector('.step-edit-text').value.trim();
+    const mins = parseInt(item.querySelector('.step-edit-mins').value) || 0;
+    const existing = t.steps[item.dataset.idx];
+    const done = existing ? (existing.done || false) : false;
+    return { text, done, estimatedMinutes: mins };
+  }).filter(s => s.text);
+  t.estimate = t.steps.reduce((sum, s) => sum + s.estimatedMinutes, 0) || t.estimate;
+  save();
+  renderMain();
+  closeEditScreen();
+  toast('✓ 保存しました');
+}
+
+
 if ('serviceWorker' in navigator) {
   // 新しいSWがアクティブになったら自動リロード（キャッシュ更新を即反映）
   navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
