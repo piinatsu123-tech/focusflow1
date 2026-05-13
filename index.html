@@ -191,20 +191,31 @@ body {
 
 /* ── TASK CARDS ── */
 .task-list { padding: 16px 20px 40px; }
+.swipe-container {
+  position: relative; margin-bottom: 10px;
+  border-radius: 0 12px 12px 0; overflow: hidden;
+}
+.delete-bg {
+  position: absolute; inset: 0;
+  background: var(--danger);
+  display: flex; align-items: center; justify-content: flex-end;
+  padding-right: 24px;
+  color: #fff; font-size: 14px; font-weight: 700;
+}
 .task-card {
   background: var(--card);
   border-left: 4px solid #dddddd;
   border-radius: 0 12px 12px 0;
   padding: 16px 16px 16px 18px;
-  margin-bottom: 10px;
+  margin-bottom: 0;
   display: flex; align-items: center; gap: 14px;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: transform 0.3s ease;
   min-height: 64px;
+  position: relative;
 }
 .task-card[data-urgency="must"] { border-left-color: var(--must); }
-.task-card.done-card { opacity: 0.45; border-left-color: #dddddd; cursor: default; }
-.task-card:not(.done-card):active { opacity: 0.7; }
+.task-card.done-card { opacity: 0.5; border-left-color: #dddddd; }
 .task-card-body { flex: 1; min-width: 0; }
 .task-card-title {
   font-size: 17px; font-weight: 500; line-height: 1.5;
@@ -469,7 +480,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v1.6';
+const APP_VERSION = 'v1.7';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -585,32 +596,65 @@ function showGroup(urgency) {
 }
 
 function renderGroupList() {
-  const list = tasks.filter(t => !t.done && t.urgency === currentUrgency);
-  const el   = document.getElementById('groupTaskList');
+  const undone = tasks.filter(t => !t.done && t.urgency === currentUrgency);
+  const done   = tasks.filter(t =>  t.done && t.urgency === currentUrgency);
+  const list   = [...undone, ...done];
+  const el     = document.getElementById('groupTaskList');
 
   if (!list.length) {
     el.innerHTML = `<div class="empty-state"><p>タスクがありません</p></div>`;
     return;
   }
   el.innerHTML = list.map(taskCardHTML).join('');
+  addSwipeListeners();
 }
 
 function taskCardHTML(t) {
-  return `<div class="task-card" data-urgency="${t.urgency || 'want'}">
-    <div class="task-card-body" onclick="selectTask('${t.id}')" style="flex:1;min-width:0;cursor:pointer;">
-      <div class="task-card-title">${esc(t.title)}</div>
-      <div class="task-card-meta">${taskEstimate(t)}分</div>
+  const doneClass = t.done ? ' done-card' : '';
+  const bodyClick = t.done ? '' : `onclick="selectTask('${t.id}')"`;
+  return `<div class="swipe-container" data-id="${t.id}">
+    <div class="delete-bg">削除</div>
+    <div class="task-card${doneClass}" data-urgency="${t.urgency || 'want'}">
+      <div class="task-card-body" ${bodyClick} style="flex:1;min-width:0;cursor:${t.done ? 'default' : 'pointer'};">
+        <div class="task-card-title">${esc(t.title)}</div>
+        <div class="task-card-meta">${taskEstimate(t)}分</div>
+      </div>
+      <button class="check-btn" onclick="toggleDone('${t.id}')">${t.done ? '✓' : ''}</button>
     </div>
-    <button class="check-btn" onclick="toggleDone('${t.id}')">${t.done ? '✓' : ''}</button>
   </div>`;
 }
 
-function handleCardClick(event, id) {
-  if (event.target.closest('[data-check]')) {
-    toggleDone(event.target.closest('[data-check]').dataset.check);
-  } else {
-    selectTask(id);
-  }
+function addSwipeListeners() {
+  document.querySelectorAll('#groupTaskList .swipe-container').forEach(container => {
+    const card = container.querySelector('.task-card');
+    let startX = 0, currentX = 0;
+
+    container.addEventListener('touchstart', e => {
+      startX = e.touches[0].clientX;
+      currentX = startX;
+      card.style.transition = 'none';
+    }, { passive: true });
+
+    container.addEventListener('touchmove', e => {
+      currentX = e.touches[0].clientX;
+      const dx = Math.min(0, currentX - startX);
+      card.style.transform = `translateX(${Math.max(dx, -100)}px)`;
+    }, { passive: true });
+
+    container.addEventListener('touchend', () => {
+      const dx = currentX - startX;
+      if (dx < -72) {
+        card.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
+        card.style.transform = 'translateX(-100%)';
+        card.style.opacity = '0';
+        const id = container.dataset.id;
+        setTimeout(() => deleteTask(id), 210);
+      } else {
+        card.style.transition = 'transform 0.3s ease';
+        card.style.transform = 'translateX(0)';
+      }
+    });
+  });
 }
 
 // ─── TASK ACTIONS ─────────────────────────────────────────────────
@@ -618,7 +662,14 @@ function selectTask(id) {
   startFocus(id);
 }
 
-function toggleDone(id) {
+function deleteTask(id) {
+  tasks = tasks.filter(t => t.id !== id);
+  save();
+  renderMain();
+  if (currentUrgency) renderGroupList();
+}
+
+
   const t = tasks.find(t => t.id === id);
   if (!t) return;
   t.done = !t.done;
