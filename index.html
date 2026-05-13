@@ -482,7 +482,46 @@ body {
   font-size: 16px; font-weight: 700; cursor: pointer;
 }
 
-/* ── TOAST ── */
+/* ── STEP DETAIL EDIT SCREEN ── */
+.step-detail-text {
+  width: 100%;
+  min-height: 120px;
+  border: none; background: none; outline: none; resize: none;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 20px; font-weight: 500; color: var(--text);
+  line-height: 1.6; padding: 0;
+}
+.step-detail-text::placeholder { color: var(--text3); }
+.step-detail-mins-wrap {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card); border-radius: 12px;
+  padding: 16px 20px; margin-top: 20px;
+}
+.step-detail-mins {
+  width: 64px; border: none; border-bottom: 2px solid var(--border-strong);
+  background: none; outline: none; text-align: center;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 24px; font-weight: 700; color: var(--text); padding: 4px 0;
+}
+.step-detail-mins-label { font-size: 16px; color: var(--text2); }
+.step-delete-btn {
+  width: 100%; height: 50px; margin-top: 16px;
+  border: 1.5px solid var(--danger, #c0392b); border-radius: 12px;
+  background: none; cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 16px; font-weight: 700;
+  color: var(--danger, #c0392b);
+}
+
+/* ── STEP LIST CARD (edit screen) ── */
+.step-list-card {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--card); border-radius: 12px;
+  padding: 14px 16px; cursor: pointer;
+}
+.step-list-card-text { flex: 1; font-size: 16px; color: var(--text); line-height: 1.4; }
+.step-list-card-meta { font-size: 13px; color: var(--text3); white-space: nowrap; }
+.step-list-card-arrow { font-size: 20px; color: var(--text3); flex-shrink: 0; }
 .toast {
   position: fixed; top: 20px; left: 50%;
   transform: translateX(-50%) translateY(-80px);
@@ -570,6 +609,27 @@ body {
   </div>
 </div>
 
+<!-- ════ SCREEN: STEP DETAIL EDIT ════ -->
+<div class="screen" id="screen-step-edit" style="z-index:50;">
+  <div class="screen-header">
+    <button class="back-btn" onclick="closeStepDetail()">‹</button>
+    <div class="header-title">ステップを編集</div>
+  </div>
+  <div class="scroll" style="padding: 24px 20px 0;">
+    <div class="edit-section-label">内容</div>
+    <textarea class="step-detail-text" id="stepDetailText" placeholder="ステップの内容を入力"></textarea>
+    <div class="step-detail-mins-wrap">
+      <span class="step-detail-mins-label">推定</span>
+      <input class="step-detail-mins" id="stepDetailMins" inputmode="numeric" placeholder="0">
+      <span class="step-detail-mins-label">分</span>
+    </div>
+    <button class="step-delete-btn" style="margin-top:24px;" onclick="deleteFromStepDetail()">このステップを削除</button>
+    <div class="edit-save-sticky">
+      <button class="edit-save-btn" onclick="saveStepDetail()">保存</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- ════ SCREEN: EDIT ════ -->
@@ -631,7 +691,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v2.1';
+const APP_VERSION = 'v2.2';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1161,62 +1221,85 @@ function closeEditScreen() {
 
 function renderEditSteps(steps) {
   const el = document.getElementById('stepEditList');
+  if (!steps.length) {
+    el.innerHTML = `<div style="color:var(--text3);font-size:14px;padding:8px 0;">ステップがありません</div>`;
+    return;
+  }
   el.innerHTML = steps.map((s, i) => {
-    const text = stepLabel(s);
-    const mins = stepMinutes(s) || '';
-    return `<div class="step-edit-item" data-idx="${i}">
-      <input class="step-edit-text" value="${esc(text)}" placeholder="ステップの内容">
-      <div class="step-edit-bottom">
-        <span>推定</span>
-        <input class="step-edit-mins" inputmode="numeric" value="${mins}" placeholder="0">
-        <span>分</span>
-        <button class="step-edit-del" onclick="deleteEditStep(${i})">削除</button>
-      </div>
+    const text = stepLabel(s) || '（未入力）';
+    const mins = stepMinutes(s);
+    return `<div class="step-list-card" onclick="openStepDetail(${i})">
+      <div class="step-list-card-text">${esc(text)}</div>
+      ${mins ? `<div class="step-list-card-meta">${mins}分</div>` : ''}
+      <div class="step-list-card-arrow">›</div>
     </div>`;
   }).join('');
 }
 
 function addEditStep() {
-  const el = document.getElementById('stepEditList');
-  const idx = el.children.length;
-  const div = document.createElement('div');
-  div.className = 'step-edit-item';
-  div.dataset.idx = idx;
-  div.innerHTML = `
-    <input class="step-edit-text" value="" placeholder="ステップの内容">
-    <div class="step-edit-bottom">
-      <span>推定</span>
-      <input class="step-edit-mins" inputmode="numeric" value="" placeholder="0">
-      <span>分</span>
-      <button class="step-edit-del" onclick="deleteEditStep(${idx})">削除</button>
-    </div>`;
-  el.appendChild(div);
-  div.querySelector('.step-edit-text').focus();
+  const t = tasks.find(t => t.id === editId);
+  if (!t) return;
+  t.steps.push({ text: '', done: false, estimatedMinutes: 0 });
+  save();
+  renderEditSteps(t.steps);
+  openStepDetail(t.steps.length - 1);
+}
+
+// ─── STEP DETAIL EDIT ────────────────────────────────────────────
+let editStepIdx = null;
+
+function openStepDetail(idx) {
+  const t = tasks.find(t => t.id === editId);
+  if (!t) return;
+  editStepIdx = idx;
+  const s = t.steps[idx];
+  document.getElementById('stepDetailText').value = stepLabel(s) || '';
+  document.getElementById('stepDetailMins').value = stepMinutes(s) || '';
+  document.getElementById('screen-step-edit').classList.add('visible');
+  setTimeout(() => document.getElementById('stepDetailText').focus(), 100);
+}
+
+function closeStepDetail() {
+  document.getElementById('screen-step-edit').classList.remove('visible');
+  editStepIdx = null;
+}
+
+function saveStepDetail() {
+  const t = tasks.find(t => t.id === editId);
+  if (!t || editStepIdx === null) return;
+  const text = document.getElementById('stepDetailText').value.trim();
+  const mins = parseInt(document.getElementById('stepDetailMins').value) || 0;
+  const existing = t.steps[editStepIdx];
+  t.steps[editStepIdx] = { text, done: existing ? existing.done : false, estimatedMinutes: mins };
+  if (!text) t.steps.splice(editStepIdx, 1); // 空なら削除
+  t.estimate = t.steps.reduce((sum, s) => sum + (s.estimatedMinutes || 0), 0) || t.estimate;
+  save();
+  renderEditSteps(t.steps);
+  closeStepDetail();
+  toast('✓ 保存しました');
+}
+
+function deleteFromStepDetail() {
+  const t = tasks.find(t => t.id === editId);
+  if (!t || editStepIdx === null) return;
+  t.steps.splice(editStepIdx, 1);
+  save();
+  renderEditSteps(t.steps);
+  closeStepDetail();
 }
 
 function deleteEditStep(idx) {
-  const el = document.getElementById('stepEditList');
-  const item = el.querySelector(`[data-idx="${idx}"]`);
-  if (item) item.remove();
-  // idx を振り直す
-  [...el.children].forEach((c, i) => {
-    c.dataset.idx = i;
-    c.querySelector('.step-edit-del').setAttribute('onclick', `deleteEditStep(${i})`);
-  });
+  const t = tasks.find(t => t.id === editId);
+  if (!t) return;
+  t.steps.splice(idx, 1);
+  save();
+  renderEditSteps(t.steps);
 }
 
 function saveEdit() {
   const t = tasks.find(t => t.id === editId);
   if (!t) return;
-  const items = document.querySelectorAll('#stepEditList .step-edit-item');
-  t.steps = [...items].map(item => {
-    const text = item.querySelector('.step-edit-text').value.trim();
-    const mins = parseInt(item.querySelector('.step-edit-mins').value) || 0;
-    const existing = t.steps[item.dataset.idx];
-    const done = existing ? (existing.done || false) : false;
-    return { text, done, estimatedMinutes: mins };
-  }).filter(s => s.text);
-  t.estimate = t.steps.reduce((sum, s) => sum + s.estimatedMinutes, 0) || t.estimate;
+  t.estimate = t.steps.reduce((sum, s) => sum + (s.estimatedMinutes || 0), 0) || t.estimate;
   save();
   renderMain();
   closeEditScreen();
