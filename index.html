@@ -469,7 +469,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v1.4';
+const APP_VERSION = 'v1.5';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -582,13 +582,22 @@ function renderGroupList() {
 }
 
 function taskCardHTML(t) {
-  return `<div class="task-card" data-urgency="${t.urgency || 'want'}" onclick="selectTask('${t.id}')">
+  return `<div class="task-card" data-urgency="${t.urgency || 'want'}" data-id="${t.id}" onclick="handleCardClick(event, '${t.id}')">
     <div class="task-card-body">
       <div class="task-card-title">${esc(t.title)}</div>
       <div class="task-card-meta">${taskEstimate(t)}分</div>
     </div>
-    <button class="check-btn" onclick="event.stopPropagation();toggleDone('${t.id}')">${t.done ? '✓' : ''}</button>
+    <button class="check-btn" data-check="${t.id}">${t.done ? '✓' : ''}</button>
   </div>`;
+}
+
+function handleCardClick(event, id) {
+  // チェックボタン自体またはその祖先のcheck-btnをクリックした場合
+  if (event.target.closest('[data-check]')) {
+    toggleDone(event.target.closest('[data-check]').dataset.check);
+  } else {
+    selectTask(id);
+  }
 }
 
 // ─── TASK ACTIONS ─────────────────────────────────────────────────
