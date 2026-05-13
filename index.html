@@ -691,7 +691,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v2.2';
+const APP_VERSION = 'v2.3';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -958,10 +958,13 @@ function showStepList() {
     const done  = typeof s === 'object' ? (s.done || false) : false;
     const label = stepLabel(s);
     const mins  = stepMinutes(s);
-    const minsStr = mins > 0 ? ` <span style="font-size:12px;color:var(--text3);margin-left:6px;">${mins}分</span>` : '';
-    return `<div class="step-list-item${done ? ' done' : ''}">
+    const minsStr = mins > 0 ? `<span style="font-size:12px;color:var(--text3);margin-left:6px;">${mins}分</span>` : '';
+    return `<div class="step-list-item${done ? ' done' : ''}"
+      style="cursor:pointer;"
+      onclick="document.querySelector('.step-list-overlay').remove();openStepDetailFrom('${t.id}',${i})">
       <div class="step-list-check">${done ? '✓' : ''}</div>
-      <div class="step-list-label">${esc(label)}${minsStr}</div>
+      <div class="step-list-label" style="flex:1;">${esc(label)}${minsStr}</div>
+      <div style="font-size:18px;color:var(--text3);padding-left:8px;">›</div>
     </div>`;
   }).join('');
   const overlay = document.createElement('div');
@@ -970,7 +973,7 @@ function showStepList() {
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
       <div class="step-list-title" style="margin-bottom:0;">すべてのステップ</div>
       <button onclick="document.querySelector('.step-list-overlay').remove();openEditScreen('${t.id}')"
-        style="border:none;background:none;font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:700;color:var(--text);cursor:pointer;padding:4px 8px;">編集 ›</button>
+        style="border:none;background:none;font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:700;color:var(--text);cursor:pointer;padding:4px 8px;">＋追加</button>
     </div>
     ${items}
   </div>`;
@@ -1247,6 +1250,13 @@ function addEditStep() {
 
 // ─── STEP DETAIL EDIT ────────────────────────────────────────────
 let editStepIdx = null;
+
+function openStepDetailFrom(taskId, idx) {
+  editId = taskId;
+  const t = tasks.find(t => t.id === taskId);
+  if (t) renderEditSteps(t.steps || []);
+  openStepDetail(idx);
+}
 
 function openStepDetail(idx) {
   const t = tasks.find(t => t.id === editId);
