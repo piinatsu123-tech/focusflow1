@@ -469,7 +469,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v1.5';
+const APP_VERSION = 'v1.6';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -484,6 +484,20 @@ const uid  = () => Date.now().toString(36) + Math.random().toString(36).slice(2,
 const save = () => localStorage.setItem('ff-tasks', JSON.stringify(tasks));
 const esc  = s => String(s||'').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// IDの重複を修復（LINE取り込みの衝突対策）
+(function deduplicateIds() {
+  const seen = new Set();
+  let changed = false;
+  tasks.forEach(t => {
+    if (!t.id || seen.has(t.id)) {
+      t.id = uid();
+      changed = true;
+    }
+    seen.add(t.id);
+  });
+  if (changed) localStorage.setItem('ff-tasks', JSON.stringify(tasks));
+})();
 
 const GROUP_CONFIG = [
   { urgency: 'must', title: '今日中に絶対' },
@@ -582,17 +596,16 @@ function renderGroupList() {
 }
 
 function taskCardHTML(t) {
-  return `<div class="task-card" data-urgency="${t.urgency || 'want'}" data-id="${t.id}" onclick="handleCardClick(event, '${t.id}')">
-    <div class="task-card-body">
+  return `<div class="task-card" data-urgency="${t.urgency || 'want'}">
+    <div class="task-card-body" onclick="selectTask('${t.id}')" style="flex:1;min-width:0;cursor:pointer;">
       <div class="task-card-title">${esc(t.title)}</div>
       <div class="task-card-meta">${taskEstimate(t)}分</div>
     </div>
-    <button class="check-btn" data-check="${t.id}">${t.done ? '✓' : ''}</button>
+    <button class="check-btn" onclick="toggleDone('${t.id}')">${t.done ? '✓' : ''}</button>
   </div>`;
 }
 
 function handleCardClick(event, id) {
-  // チェックボタン自体またはその祖先のcheck-btnをクリックした場合
   if (event.target.closest('[data-check]')) {
     toggleDone(event.target.closest('[data-check]').dataset.check);
   } else {
