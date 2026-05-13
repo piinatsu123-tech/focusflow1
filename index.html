@@ -669,7 +669,7 @@ function deleteTask(id) {
   if (currentUrgency) renderGroupList();
 }
 
-
+function toggleDone(id) {
   const t = tasks.find(t => t.id === id);
   if (!t) return;
   t.done = !t.done;
