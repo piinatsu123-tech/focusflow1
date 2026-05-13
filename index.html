@@ -828,7 +828,8 @@ async function importFromLine() {
       const urgency = t.urgency || 'want';
       const fromSteps = steps.reduce((sum, s) => sum + (s.estimatedMinutes || 0), 0);
       const estimate = fromSteps > 0 ? fromSteps : (t.estimate || 30);
-      addTask({ ...t, urgency, estimate, steps, done: false });
+      const { id, ...rest } = t; // IDは捨てて uid() で新規発行
+      addTask({ ...rest, urgency, estimate, steps, done: false });
     });
     await fetch('https://divine-wildflower-8952.piinatsu123.workers.dev/tasks', { method: 'DELETE' });
     renderMain();
