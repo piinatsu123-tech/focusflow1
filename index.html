@@ -385,7 +385,8 @@ body {
     </div>
   </div>
 
-  <div class="import-wrap">
+  <div class="import-wrap" style="gap:8px;">
+    <button class="import-btn" onclick="importFromLine()" style="background:none;border-color:#00b300;color:#00b300;">LINEから取り込む</button>
     <button class="import-btn" onclick="importFromClipboard()">クリップボードからインポート</button>
   </div>
 
@@ -812,6 +813,33 @@ function normalizeQuotes(text) {
     .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036\uFF02]/g, '"')
     .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035\uFF07]/g, "'")
     .trim();
+}
+
+// LINEボットから取り込む
+async function importFromLine() {
+  try {
+    const res = await fetch('https://divine-wildflower-8952.piinatsu123.workers.dev/tasks');
+    const newTasks = await res.json();
+    if (!newTasks || newTasks.length === 0) {
+      toast('取り込めるタスクがありません');
+      return;
+    }
+    newTasks.forEach(t => {
+      const steps = (t.steps || []).map(s => typeof s === 'string'
+        ? { text: s, done: false, estimatedMinutes: 0 }
+        : { text: s.text || s.title || '', done: s.done || false,
+            estimatedMinutes: s.estimatedMinutes || 0 });
+      const urgency = t.urgency || 'want';
+      const fromSteps = steps.reduce((sum, s) => sum + (s.estimatedMinutes || 0), 0);
+      const estimate = fromSteps > 0 ? fromSteps : (t.estimate || 30);
+      addTask({ ...t, urgency, estimate, steps, done: false });
+    });
+    await fetch('https://divine-wildflower-8952.piinatsu123.workers.dev/tasks', { method: 'DELETE' });
+    renderMain();
+    toast('✓ ' + newTasks.length + '件のタスクをLINEから取り込みました');
+  } catch (e) {
+    toast('取り込みに失敗しました');
+  }
 }
 
 // クリップボードからインポート（ボタン押下時）
