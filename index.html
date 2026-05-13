@@ -386,7 +386,6 @@ body {
   </div>
 
   <div class="import-wrap" style="gap:8px;">
-    <button class="import-btn" onclick="importFromLine()" style="background:none;border-color:#00b300;color:#00b300;">LINEから取り込む</button>
     <button class="import-btn" onclick="importFromClipboard()">クリップボードからインポート</button>
   </div>
 
@@ -815,15 +814,12 @@ function normalizeQuotes(text) {
     .trim();
 }
 
-// LINEボットから取り込む
+// LINEボットから自動取り込む
 async function importFromLine() {
   try {
     const res = await fetch('https://divine-wildflower-8952.piinatsu123.workers.dev/tasks');
     const newTasks = await res.json();
-    if (!newTasks || newTasks.length === 0) {
-      toast('取り込めるタスクがありません');
-      return;
-    }
+    if (!newTasks || newTasks.length === 0) return;
     newTasks.forEach(t => {
       const steps = (t.steps || []).map(s => typeof s === 'string'
         ? { text: s, done: false, estimatedMinutes: 0 }
@@ -838,9 +834,15 @@ async function importFromLine() {
     renderMain();
     toast('✓ ' + newTasks.length + '件のタスクをLINEから取り込みました');
   } catch (e) {
-    toast('取り込みに失敗しました');
+    // サイレントに失敗（自動実行なのでエラー表示しない）
   }
 }
+
+// アプリを開いたとき・フォアグラウンドに戻ったとき自動チェック
+importFromLine();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') importFromLine();
+});
 
 // クリップボードからインポート（ボタン押下時）
 async function importFromClipboard() {
