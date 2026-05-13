@@ -364,6 +364,48 @@ body {
 }
 .import-btn:active { opacity: 0.6; }
 
+/* ── TAB BAR ── */
+.tab-bar {
+  display: flex; flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 0 20px; gap: 0;
+}
+.tab-btn {
+  flex: 1; height: 44px; border: none; background: none;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px; font-weight: 700; color: var(--text3);
+  cursor: pointer; border-bottom: 2px solid transparent;
+  margin-bottom: -1px; transition: color 0.15s;
+}
+.tab-btn.active { color: var(--text); border-bottom-color: var(--text); }
+.tab-content { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.tab-content.visible { display: flex; }
+
+/* ── ALL TASKS VIEW ── */
+.urgency-section { padding: 0 20px; }
+.urgency-section-header {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  color: var(--text3); padding: 16px 0 8px;
+}
+.urgency-section.must-section .urgency-section-header { color: var(--must); }
+.urgency-section.drag-over { background: rgba(0,0,0,0.04); border-radius: 12px; }
+.all-task-card {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--card); border-left: 4px solid #ddd;
+  border-radius: 0 12px 12px 0;
+  padding: 14px 14px 14px 18px;
+  margin-bottom: 8px; min-height: 58px;
+  user-select: none; -webkit-user-select: none;
+  touch-action: none;
+}
+.all-task-card[data-urgency="must"] { border-left-color: var(--must); }
+.drag-ghost {
+  position: fixed; pointer-events: none; z-index: 500;
+  opacity: 0.88; border-radius: 0 12px 12px 0;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.18);
+  transform: scale(1.02);
+}
+
 /* ── EDIT SCREEN ── */
 .edit-section { padding: 20px 20px 0; }
 .edit-section-label {
@@ -453,22 +495,33 @@ body {
     <div class="version-badge" id="versionBadge"></div>
   </div>
 
-  <div class="time-bar-wrap">
-    <div class="time-bar-label">
-      <span class="time-bar-remaining">今日の残り <strong id="timeBarRemaining">0.0</strong>h</span>
-      <span class="time-bar-total" id="timeBarTotal">/ 0.0h</span>
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-btn-home" onclick="switchTab('home')">ホーム</button>
+    <button class="tab-btn" id="tab-btn-all" onclick="switchTab('all')">すべて</button>
+  </div>
+
+  <!-- HOME TAB -->
+  <div class="tab-content visible" id="tab-home">
+    <div class="time-bar-wrap">
+      <div class="time-bar-label">
+        <span class="time-bar-remaining">今日の残り <strong id="timeBarRemaining">0.0</strong>h</span>
+        <span class="time-bar-total" id="timeBarTotal">/ 0.0h</span>
+      </div>
+      <div class="time-bar-track">
+        <div class="time-bar-fill" id="timeBarFill" style="width:0%"></div>
+      </div>
     </div>
-    <div class="time-bar-track">
-      <div class="time-bar-fill" id="timeBarFill" style="width:0%"></div>
+    <div class="import-wrap" style="gap:8px;">
+      <button class="import-btn" onclick="importFromClipboard()">クリップボードからインポート</button>
+    </div>
+    <div class="scroll">
+      <div class="group-rows" id="mainGroups"></div>
     </div>
   </div>
 
-  <div class="import-wrap" style="gap:8px;">
-    <button class="import-btn" onclick="importFromClipboard()">クリップボードからインポート</button>
-  </div>
-
-  <div class="scroll">
-    <div class="group-rows" id="mainGroups"></div>
+  <!-- ALL TAB -->
+  <div class="tab-content" id="tab-all">
+    <div class="scroll" id="allTasksScroll"></div>
   </div>
 </div>
 
@@ -522,17 +575,9 @@ body {
       <div class="edit-task-title" id="editTaskTitle"></div>
     </div>
     <div class="edit-section" style="margin-top:20px;">
-      <div class="edit-section-label">優先度</div>
-      <div class="urgency-pills">
-        <button class="urgency-pill" id="pill-must" onclick="selectUrgency('must')">今日中に絶対</button>
-        <button class="urgency-pill" id="pill-want" onclick="selectUrgency('want')">できたら</button>
-        <button class="urgency-pill" id="pill-nice" onclick="selectUrgency('nice')">余力があれば</button>
-      </div>
-    </div>
-    <div class="edit-section" style="margin-top:20px;">
       <div class="edit-section-label">ステップ（左：内容　右：分数）</div>
+      <button class="add-step-btn" onclick="addEditStep()" style="margin-bottom:8px;">＋ ステップを追加</button>
       <div class="step-edit-list" id="stepEditList"></div>
-      <button class="add-step-btn" onclick="addEditStep()">＋ ステップを追加</button>
     </div>
   </div>
   <div class="edit-save-bar">
@@ -577,7 +622,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v1.8';
+const APP_VERSION = 'v1.9';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -969,17 +1014,133 @@ function updateTimerUI() {
   }
 }
 
+// ─── TABS ─────────────────────────────────────────────────────────
+let currentTab = 'home';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-home').classList.toggle('visible', tab === 'home');
+  document.getElementById('tab-all').classList.toggle('visible', tab === 'all');
+  document.getElementById('tab-btn-home').classList.toggle('active', tab === 'home');
+  document.getElementById('tab-btn-all').classList.toggle('active', tab === 'all');
+  if (tab === 'all') renderAllTasks();
+}
+
+// ─── ALL TASKS VIEW ───────────────────────────────────────────────
+const URGENCY_LABELS = { must: '今日中に絶対', want: 'できたらやりたい', nice: '余力があれば' };
+
+function renderAllTasks() {
+  const el = document.getElementById('allTasksScroll');
+  const html = ['must','want','nice'].map(urgency => {
+    const list = tasks.filter(t => !t.done && t.urgency === urgency);
+    const cards = list.length
+      ? list.map(t => `
+        <div class="all-task-card" data-id="${t.id}" data-urgency="${urgency}">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:16px;font-weight:500;color:var(--text);line-height:1.4;word-break:break-word;">${esc(t.title)}</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px;">${taskEstimate(t)}分</div>
+          </div>
+          <div style="font-size:22px;color:var(--text3);padding-left:8px;flex-shrink:0;">⠿</div>
+        </div>`).join('')
+      : `<div style="padding:10px 0 4px;color:var(--text3);font-size:13px;">タスクなし</div>`;
+    const mustCls = urgency === 'must' ? ' must-section' : '';
+    return `<div class="urgency-section${mustCls}" data-urgency="${urgency}">
+      <div class="urgency-section-header">${URGENCY_LABELS[urgency]}</div>
+      <div class="section-cards" data-urgency="${urgency}">${cards}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div style="padding-bottom:40px;">${html}</div>`;
+  addDragListeners();
+}
+
+// ─── DRAG TO REPRIORITIZE ─────────────────────────────────────────
+let drag = null; // { id, ghost, offsetY }
+
+function addDragListeners() {
+  document.querySelectorAll('#allTasksScroll .all-task-card').forEach(card => {
+    let timer = null;
+    let moved = false;
+    let startX = 0, startY = 0;
+
+    card.addEventListener('touchstart', e => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      moved = false;
+      timer = setTimeout(() => {
+        if (!moved) startDrag(card, e.touches[0]);
+      }, 220);
+    }, { passive: true });
+
+    card.addEventListener('touchmove', e => {
+      const dx = Math.abs(e.touches[0].clientX - startX);
+      const dy = Math.abs(e.touches[0].clientY - startY);
+      if (dx > 8 || dy > 8) { moved = true; clearTimeout(timer); }
+      if (drag) moveDrag(e.touches[0]);
+    }, { passive: true });
+
+    card.addEventListener('touchend', e => {
+      clearTimeout(timer);
+      if (drag) endDrag(e.changedTouches[0]);
+    });
+  });
+}
+
+function startDrag(card, touch) {
+  const rect = card.getBoundingClientRect();
+  const ghost = document.createElement('div');
+  ghost.className = 'drag-ghost';
+  ghost.style.cssText = `width:${rect.width}px;left:${rect.left}px;top:${rect.top}px;`;
+  ghost.innerHTML = card.innerHTML;
+  ghost.style.background = 'var(--card)';
+  ghost.style.padding = '14px 14px 14px 18px';
+  ghost.style.display = 'flex';
+  ghost.style.alignItems = 'center';
+  ghost.style.borderLeft = `4px solid ${card.dataset.urgency === 'must' ? 'var(--must)' : '#ddd'}`;
+  document.body.appendChild(ghost);
+  card.style.opacity = '0.3';
+  drag = { id: card.dataset.id, ghost, card, offsetY: touch.clientY - rect.top };
+}
+
+function moveDrag(touch) {
+  if (!drag) return;
+  drag.ghost.style.top = (touch.clientY - drag.offsetY) + 'px';
+  document.querySelectorAll('#allTasksScroll .urgency-section').forEach(sec => {
+    const r = sec.getBoundingClientRect();
+    sec.classList.toggle('drag-over', touch.clientY >= r.top && touch.clientY <= r.bottom);
+  });
+}
+
+function endDrag(touch) {
+  if (!drag) return;
+  drag.ghost.remove();
+  drag.card.style.opacity = '';
+  let targetUrgency = null;
+  document.querySelectorAll('#allTasksScroll .urgency-section').forEach(sec => {
+    sec.classList.remove('drag-over');
+    const r = sec.getBoundingClientRect();
+    if (touch.clientY >= r.top && touch.clientY <= r.bottom) targetUrgency = sec.dataset.urgency;
+  });
+  if (targetUrgency) {
+    const t = tasks.find(t => t.id === drag.id);
+    if (t && t.urgency !== targetUrgency) {
+      t.urgency = targetUrgency;
+      save();
+      renderMain();
+      renderAllTasks();
+      toast('優先度を変更しました');
+    }
+  }
+  drag = null;
+}
+
 // ─── EDIT SCREEN ─────────────────────────────────────────────────
 let editId = null;
-let editUrgency = 'want';
 
 function openEditScreen(id) {
   editId = id;
   const t = tasks.find(t => t.id === id);
   if (!t) return;
-  editUrgency = t.urgency || 'want';
   document.getElementById('editTaskTitle').textContent = t.title;
-  selectUrgency(editUrgency);
   renderEditSteps(t.steps || []);
   document.getElementById('screen-edit').classList.add('visible');
 }
@@ -987,14 +1148,6 @@ function openEditScreen(id) {
 function closeEditScreen() {
   document.getElementById('screen-edit').classList.remove('visible');
   editId = null;
-}
-
-function selectUrgency(u) {
-  editUrgency = u;
-  ['must','want','nice'].forEach(x => {
-    const el = document.getElementById('pill-' + x);
-    el.className = 'urgency-pill' + (x === u ? ' active-' + x : '');
-  });
 }
 
 function renderEditSteps(steps) {
@@ -1038,7 +1191,6 @@ function deleteEditStep(idx) {
 function saveEdit() {
   const t = tasks.find(t => t.id === editId);
   if (!t) return;
-  t.urgency = editUrgency;
   const items = document.querySelectorAll('#stepEditList .step-edit-item');
   t.steps = [...items].map(item => {
     const text = item.querySelector('.step-edit-text').value.trim();
