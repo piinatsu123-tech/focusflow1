@@ -691,7 +691,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v2.3';
+const APP_VERSION = 'v2.4';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1250,8 +1250,10 @@ function addEditStep() {
 
 // ─── STEP DETAIL EDIT ────────────────────────────────────────────
 let editStepIdx = null;
+let stepDetailFromSheet = false;
 
 function openStepDetailFrom(taskId, idx) {
+  stepDetailFromSheet = true;
   editId = taskId;
   const t = tasks.find(t => t.id === taskId);
   if (t) renderEditSteps(t.steps || []);
@@ -1259,6 +1261,7 @@ function openStepDetailFrom(taskId, idx) {
 }
 
 function openStepDetail(idx) {
+  stepDetailFromSheet = false;
   const t = tasks.find(t => t.id === editId);
   if (!t) return;
   editStepIdx = idx;
@@ -1272,6 +1275,10 @@ function openStepDetail(idx) {
 function closeStepDetail() {
   document.getElementById('screen-step-edit').classList.remove('visible');
   editStepIdx = null;
+  if (stepDetailFromSheet) {
+    stepDetailFromSheet = false;
+    showStepList();
+  }
 }
 
 function saveStepDetail() {
