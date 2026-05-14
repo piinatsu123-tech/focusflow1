@@ -813,7 +813,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v3.9';
+const APP_VERSION = 'v4.0';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1272,14 +1272,14 @@ function renderTimeline() {
     const color = (isOverdue || g.hasMust) ? '#e74c3c' : '#aaa';
     const r = Math.max(9, Math.min(16, 9 + g.count - 1));
     const showLabel = g.days !== 0;
-    const daysLabel = isOverdue
-      ? `期限切れ`
-      : g.days === 1 ? `1日` : `${g.days}日`;
+    const daysLabel = isOverdue ? `期限切れ`
+      : g.days === 1 ? `明日`
+      : `${g.days}日`;
     return `
       <circle cx="${x}" cy="${lineY}" r="${r}" fill="${color}"/>
       <text x="${x}" y="${lineY}" text-anchor="middle" dominant-baseline="middle"
         font-size="${r >= 12 ? 12 : 10}" fill="white" font-weight="700">${g.count}</text>
-      ${showLabel ? `<text x="${x}" y="${lineY + r + 14}" text-anchor="middle" font-size="13" fill="${color}" font-weight="500">あと${daysLabel}</text>` : ''}`;
+      ${showLabel ? `<text x="${x}" y="${lineY + r + 14}" text-anchor="middle" font-size="13" fill="${color}" font-weight="500">${daysLabel}</text>` : ''}`;
   }).join('');
 
   container.innerHTML = `
