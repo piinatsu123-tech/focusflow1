@@ -414,6 +414,13 @@ body {
 }
 .all-task-card[data-urgency="must"] { border-left-color: var(--must); }
 .section-cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.drag-handle {
+  font-size: 22px; color: var(--text3);
+  padding: 14px 0 14px 14px; flex-shrink: 0;
+  touch-action: none;
+  cursor: grab;
+  user-select: none; -webkit-user-select: none;
+}
 .drag-ghost {
   position: fixed; pointer-events: none; z-index: 500;
   opacity: 0.88; border-radius: 0 12px 12px 0;
@@ -798,7 +805,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v3.1';
+const APP_VERSION = 'v3.2';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1292,7 +1299,7 @@ function renderAllTasks() {
               ${dueBadge}
               <div style="font-size:12px;color:var(--text3);margin-top:2px;">${taskEstimate(t)}分</div>
             </div>
-            <div style="font-size:18px;color:var(--text3);flex-shrink:0;">›</div>
+            <div class="drag-handle" onclick="event.stopPropagation()">⠿</div>
           </div>`;
         }).join('')
       : `<div style="padding:10px 0 4px;color:var(--text3);font-size:13px;">タスクなし</div>`;
@@ -1349,7 +1356,25 @@ function actionSetUrgency(urgency) {
   toast('優先度を変更しました');
 }
 
-function addDragListeners() {} // ドラッグ廃止・アクションシートで代替
+function addDragListeners() {
+  document.querySelectorAll('#allTasksScroll .drag-handle').forEach(handle => {
+    const card = handle.closest('.all-task-card');
+
+    handle.addEventListener('touchstart', e => {
+      e.preventDefault();
+      startDrag(card, e.touches[0]);
+    }, { passive: false });
+
+    handle.addEventListener('touchmove', e => {
+      e.preventDefault();
+      if (drag) moveDrag(e.touches[0]);
+    }, { passive: false });
+
+    handle.addEventListener('touchend', e => {
+      if (drag) endDrag(e.changedTouches[0]);
+    });
+  });
+}
 
 
 
