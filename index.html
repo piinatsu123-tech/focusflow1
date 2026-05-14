@@ -410,6 +410,7 @@ body {
   padding: 14px 14px 14px 18px;
   margin-bottom: 0; min-height: 58px;
   position: relative;
+  touch-action: pan-y;
   user-select: none; -webkit-user-select: none;
 }
 .all-task-card[data-urgency="must"] { border-left-color: var(--must); }
@@ -805,7 +806,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v3.6';
+const APP_VERSION = 'v3.7';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
