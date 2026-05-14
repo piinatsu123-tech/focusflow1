@@ -813,7 +813,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v4.0';
+const APP_VERSION = 'v4.1';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1236,6 +1236,7 @@ function formatDueDate(dateStr) {
   const label = `${due.getMonth()+1}/${due.getDate()}（${days[due.getDay()]}）`;
   if (diffDays < 0) return { label: `${label} 期限切れ`, cls: 'overdue' };
   if (diffDays === 0) return { label: `今日まで`, cls: 'overdue' };
+  if (diffDays === 1) return { label: `明日まで`, cls: 'normal' };
   return { label: `${label}まで`, cls: 'normal' };
 }
 
@@ -1266,20 +1267,26 @@ function renderTimeline() {
   const xOf = d => padL + ((d - minDay) / range) * lineW;
   const todayX = xOf(0);
 
-  const markers = Object.entries(groups).map(([, g]) => {
+  // x座標順にソートしてラベル重なりを防ぐ
+  const sorted = Object.entries(groups).sort((a, b) => a[1].days - b[1].days);
+  const MIN_SPACING = 46;
+  let lastLabelX = todayX; // 「今日」ラベルの位置を起点に
+
+  const markers = sorted.map(([, g]) => {
     const x = xOf(g.days);
     const isOverdue = g.days < 0;
     const color = (isOverdue || g.hasMust) ? '#e74c3c' : '#aaa';
     const r = Math.max(9, Math.min(16, 9 + g.count - 1));
-    const showLabel = g.days !== 0;
     const daysLabel = isOverdue ? `期限切れ`
       : g.days === 1 ? `明日`
       : `${g.days}日`;
+    const canShowLabel = g.days !== 0 && Math.abs(x - lastLabelX) >= MIN_SPACING;
+    if (canShowLabel) lastLabelX = x;
     return `
       <circle cx="${x}" cy="${lineY}" r="${r}" fill="${color}"/>
       <text x="${x}" y="${lineY}" text-anchor="middle" dominant-baseline="middle"
         font-size="${r >= 12 ? 12 : 10}" fill="white" font-weight="700">${g.count}</text>
-      ${showLabel ? `<text x="${x}" y="${lineY + r + 14}" text-anchor="middle" font-size="13" fill="${color}" font-weight="500">${daysLabel}</text>` : ''}`;
+      ${canShowLabel ? `<text x="${x}" y="${lineY + r + 14}" text-anchor="middle" font-size="13" fill="${color}" font-weight="500">${daysLabel}</text>` : ''}`;
   }).join('');
 
   container.innerHTML = `
