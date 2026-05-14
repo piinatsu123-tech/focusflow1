@@ -805,7 +805,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v3.5';
+const APP_VERSION = 'v3.6';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1354,6 +1354,8 @@ function addDragListeners() {
     card.addEventListener('touchend', () => {
       const dx = curX - startX;
       if (swiping && dx > 80) {
+        // swipe後に発火するclickを1回だけキャンセル
+        document.addEventListener('click', e => e.stopPropagation(), { capture: true, once: true });
         card.style.transition = 'transform .2s ease, opacity .2s ease';
         card.style.transform = 'translateX(110%)';
         card.style.opacity = '0';
