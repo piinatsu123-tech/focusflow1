@@ -413,6 +413,15 @@ body {
   user-select: none; -webkit-user-select: none;
 }
 .all-task-card[data-urgency="must"] { border-left-color: var(--must); }
+.delete-mode .all-task-card {
+  border-left-color: #e74c3c;
+  transition: transform .25s ease;
+}
+.delete-mode-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 20px 0;
+  font-size: 13px; font-weight: 700; color: #e74c3c;
+}
 .section-cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
 .drag-handle {
   font-size: 22px; color: var(--text3);
@@ -661,7 +670,11 @@ body {
 
   <!-- ALL TAB -->
   <div class="tab-content" id="tab-all">
-    <div id="timelineContainer" style="padding: 16px 20px 0; display:none;"></div>
+    <div style="display:flex;justify-content:flex-end;padding:8px 20px 0;">
+      <button id="deleteModeBtn" onclick="toggleDeleteMode()"
+        style="border:none;background:none;font-size:20px;cursor:pointer;padding:4px 8px;border-radius:8px;color:var(--text3);transition:all .15s;">🗑</button>
+    </div>
+    <div id="timelineContainer" style="padding: 4px 20px 0; display:none;"></div>
     <div class="scroll" id="allTasksScroll"></div>
   </div>
 </div>
@@ -805,7 +818,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v3.3';
+const APP_VERSION = 'v3.4';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1204,6 +1217,7 @@ function updateTimerUI() {
 let currentTab = 'home';
 
 function switchTab(tab) {
+  if (deleteMode) { deleteMode = false; }
   currentTab = tab;
   document.getElementById('tab-home').classList.toggle('visible', tab === 'home');
   document.getElementById('tab-all').classList.toggle('visible', tab === 'all');
@@ -1293,7 +1307,7 @@ function renderAllTasks() {
           const dueBadge = due
             ? `<div class="due-badge ${due.cls}">${due.label}</div>`
             : '';
-        return `<div class="all-task-card" data-id="${t.id}" data-urgency="${urgency}" onclick="openEditScreen('${t.id}')">
+        return `<div class="all-task-card" data-id="${t.id}" data-urgency="${urgency}" onclick="if(!deleteMode)openEditScreen('${t.id}')">
             <div style="flex:1;min-width:0;">
               <div style="font-size:16px;font-weight:500;color:var(--text);line-height:1.4;word-break:break-word;">${esc(t.title)}</div>
               ${dueBadge}
@@ -1314,6 +1328,59 @@ function renderAllTasks() {
 
 // ─── DRAG TO REPRIORITIZE ─────────────────────────────────────────
 let drag = null; // { id, ghost, offsetY }
+
+// ─── DELETE MODE ──────────────────────────────────────────────────
+let deleteMode = false;
+
+function toggleDeleteMode() {
+  deleteMode = !deleteMode;
+  const btn = document.getElementById('deleteModeBtn');
+  const scroll = document.getElementById('allTasksScroll');
+  btn.style.color = deleteMode ? '#e74c3c' : 'var(--text3)';
+  btn.style.background = deleteMode ? 'rgba(231,76,60,0.1)' : 'none';
+  scroll.classList.toggle('delete-mode', deleteMode);
+  if (deleteMode) {
+    toast('右スワイプでタスクを削除');
+    addDeleteSwipeListeners();
+  } else {
+    toast('削除モードを終了');
+  }
+}
+
+function addDeleteSwipeListeners() {
+  document.querySelectorAll('#allTasksScroll .all-task-card').forEach(card => {
+    if (card.dataset.deleteListened) return;
+    card.dataset.deleteListened = '1';
+    let startX = 0, curX = 0;
+
+    card.addEventListener('touchstart', e => {
+      if (!deleteMode) return;
+      startX = curX = e.touches[0].clientX;
+      card.style.transition = 'none';
+    }, { passive: true });
+
+    card.addEventListener('touchmove', e => {
+      if (!deleteMode) return;
+      curX = e.touches[0].clientX;
+      const dx = curX - startX;
+      if (dx > 0) card.style.transform = `translateX(${Math.min(dx, 120)}px)`;
+    }, { passive: true });
+
+    card.addEventListener('touchend', e => {
+      if (!deleteMode) return;
+      const dx = curX - startX;
+      if (dx > 80) {
+        card.style.transition = 'transform .2s ease, opacity .2s ease';
+        card.style.transform = 'translateX(110%)';
+        card.style.opacity = '0';
+        setTimeout(() => deleteTask(card.dataset.id), 210);
+      } else {
+        card.style.transition = 'transform .3s ease';
+        card.style.transform = 'translateX(0)';
+      }
+    });
+  });
+}
 
 // ─── ACTION SHEET ─────────────────────────────────────────────────
 let actionTaskId = null;
