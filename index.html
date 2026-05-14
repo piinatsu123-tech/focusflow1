@@ -691,7 +691,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v2.4';
+const APP_VERSION = 'v2.5';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1261,7 +1261,6 @@ function openStepDetailFrom(taskId, idx) {
 }
 
 function openStepDetail(idx) {
-  stepDetailFromSheet = false;
   const t = tasks.find(t => t.id === editId);
   if (!t) return;
   editStepIdx = idx;
