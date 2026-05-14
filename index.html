@@ -382,13 +382,24 @@ body {
 .tab-content.visible { display: flex; }
 
 /* ── ALL TASKS VIEW ── */
-.urgency-section { padding: 0 20px; }
+.urgency-section { padding: 0 20px; margin-top: 8px; }
 .urgency-section-header {
-  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
-  color: var(--text3); padding: 16px 0 8px;
+  font-size: 19px; font-weight: 900;
+  color: var(--text); letter-spacing: -0.3px; line-height: 1.2;
+  padding: 20px 0 10px;
 }
 .urgency-section.must-section .urgency-section-header { color: var(--must); }
+.urgency-section.want-section .urgency-section-header { color: var(--text); }
+.urgency-section.nice-section .urgency-section-header { color: var(--text2); }
 .urgency-section.drag-over { background: rgba(0,0,0,0.04); border-radius: 12px; }
+.due-badge {
+  display: inline-block;
+  font-size: 15px; font-weight: 700;
+  margin-top: 4px; line-height: 1.4;
+}
+.due-badge.overdue { color: var(--must); }
+.due-badge.soon { color: #e67e22; }
+.due-badge.normal { color: var(--text2); }
 .all-task-card {
   display: flex; align-items: center; gap: 12px;
   background: var(--card); border-left: 4px solid #ddd;
@@ -691,7 +702,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v2.5';
+const APP_VERSION = 'v2.6';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1101,22 +1112,44 @@ function switchTab(tab) {
 // ─── ALL TASKS VIEW ───────────────────────────────────────────────
 const URGENCY_LABELS = { must: '今日中に絶対', want: 'できたらやりたい', nice: '余力があれば' };
 
+function formatDueDate(dateStr) {
+  if (!dateStr) return null;
+  const due = new Date(dateStr);
+  if (isNaN(due)) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+  const diffDays = Math.round((dueDay - today) / 86400000);
+  const days = ['日','月','火','水','木','金','土'];
+  const label = `${due.getMonth()+1}/${due.getDate()}（${days[due.getDay()]}）`;
+  if (diffDays < 0) return { label: `${label} 期限切れ`, cls: 'overdue' };
+  if (diffDays === 0) return { label: `今日まで`, cls: 'overdue' };
+  if (diffDays === 1) return { label: `明日まで`, cls: 'soon' };
+  if (diffDays <= 3) return { label: `${label}まで`, cls: 'soon' };
+  return { label: `${label}まで`, cls: 'normal' };
+}
+
 function renderAllTasks() {
   const el = document.getElementById('allTasksScroll');
   const html = ['must','want','nice'].map(urgency => {
     const list = tasks.filter(t => !t.done && t.urgency === urgency);
     const cards = list.length
-      ? list.map(t => `
-        <div class="all-task-card" data-id="${t.id}" data-urgency="${urgency}">
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:16px;font-weight:500;color:var(--text);line-height:1.4;word-break:break-word;">${esc(t.title)}</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:2px;">${taskEstimate(t)}分</div>
-          </div>
-          <div style="font-size:22px;color:var(--text3);padding-left:8px;flex-shrink:0;">⠿</div>
-        </div>`).join('')
+      ? list.map(t => {
+          const due = formatDueDate(t.dueDate);
+          const dueBadge = due
+            ? `<div class="due-badge ${due.cls}">📅 ${due.label}</div>`
+            : '';
+          return `<div class="all-task-card" data-id="${t.id}" data-urgency="${urgency}">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:16px;font-weight:500;color:var(--text);line-height:1.4;word-break:break-word;">${esc(t.title)}</div>
+              ${dueBadge}
+              <div style="font-size:12px;color:var(--text3);margin-top:2px;">${taskEstimate(t)}分</div>
+            </div>
+            <div style="font-size:22px;color:var(--text3);padding-left:8px;flex-shrink:0;">⠿</div>
+          </div>`;
+        }).join('')
       : `<div style="padding:10px 0 4px;color:var(--text3);font-size:13px;">タスクなし</div>`;
-    const mustCls = urgency === 'must' ? ' must-section' : '';
-    return `<div class="urgency-section${mustCls}" data-urgency="${urgency}">
+    return `<div class="urgency-section ${urgency}-section" data-urgency="${urgency}">
       <div class="urgency-section-header">${URGENCY_LABELS[urgency]}</div>
       <div class="section-cards" data-urgency="${urgency}">${cards}</div>
     </div>`;
