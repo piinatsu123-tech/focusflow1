@@ -580,6 +580,7 @@ body {
 
   <!-- ALL TAB -->
   <div class="tab-content" id="tab-all">
+    <div id="timelineContainer" style="padding: 16px 20px 0; display:none;"></div>
     <div class="scroll" id="allTasksScroll"></div>
   </div>
 </div>
@@ -702,7 +703,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v2.6';
+const APP_VERSION = 'v2.7';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1129,7 +1130,58 @@ function formatDueDate(dateStr) {
   return { label: `${label}まで`, cls: 'normal' };
 }
 
+function renderTimeline() {
+  const container = document.getElementById('timelineContainer');
+  const withDue = tasks.filter(t => !t.done && t.dueDate);
+  if (!withDue.length) { container.style.display = 'none'; return; }
+  container.style.display = 'block';
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const groups = {};
+  withDue.forEach(t => {
+    const d = new Date(t.dueDate); d.setHours(0,0,0,0);
+    const days = Math.round((d - today) / 86400000);
+    if (!groups[t.dueDate]) groups[t.dueDate] = { days, count: 0, hasMust: false };
+    groups[t.dueDate].count++;
+    if (t.urgency === 'must') groups[t.dueDate].hasMust = true;
+  });
+
+  const dayVals = Object.values(groups).map(g => g.days);
+  const minDay = Math.min(0, ...dayVals);
+  const maxDay = Math.max(14, ...dayVals) + 2;
+  const range  = maxDay - minDay;
+
+  const W = 320, padL = 20, padR = 20, lineW = W - padL - padR, lineY = 38;
+  const xOf = d => padL + ((d - minDay) / range) * lineW;
+  const todayX = xOf(0);
+
+  const markers = Object.entries(groups).map(([dateStr, g]) => {
+    const x = xOf(g.days);
+    const dObj = new Date(dateStr);
+    const lbl = `${dObj.getMonth()+1}/${dObj.getDate()}`;
+    const color = g.days < 0 ? '#e74c3c'
+      : g.hasMust ? '#e74c3c'
+      : g.days <= 3 ? '#e67e22'
+      : '#999';
+    const cnt = g.count > 1 ? `<tspan font-size="9" dy="-4">${g.count}</tspan>` : '';
+    return `
+      <line x1="${x}" y1="${lineY-6}" x2="${x}" y2="${lineY+6}" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
+      <text x="${x}" y="${lineY-12}" text-anchor="middle" font-size="13" fill="${color}">☑${cnt}</text>
+      <text x="${x}" y="${lineY+18}" text-anchor="middle" font-size="10" fill="${color}">${lbl}</text>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--text3);margin-bottom:6px;">期日タイムライン</div>
+    <svg viewBox="0 0 ${W} 64" width="100%" style="overflow:visible;display:block;">
+      <line x1="${padL}" y1="${lineY}" x2="${W-padR}" y2="${lineY}" stroke="var(--border-strong)" stroke-width="1.5"/>
+      <circle cx="${todayX}" cy="${lineY}" r="4" fill="var(--text)"/>
+      <text x="${todayX}" y="${lineY+18}" text-anchor="middle" font-size="10" fill="var(--text2)">今日</text>
+      ${markers}
+    </svg>`;
+}
+
 function renderAllTasks() {
+  renderTimeline();
   const el = document.getElementById('allTasksScroll');
   const html = ['must','want','nice'].map(urgency => {
     const list = tasks.filter(t => !t.done && t.urgency === urgency);
@@ -1137,7 +1189,7 @@ function renderAllTasks() {
       ? list.map(t => {
           const due = formatDueDate(t.dueDate);
           const dueBadge = due
-            ? `<div class="due-badge ${due.cls}">📅 ${due.label}</div>`
+            ? `<div class="due-badge ${due.cls}">${due.label}</div>`
             : '';
           return `<div class="all-task-card" data-id="${t.id}" data-urgency="${urgency}">
             <div style="flex:1;min-width:0;">
