@@ -813,7 +813,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v4.2';
+const APP_VERSION = 'v4.3';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1323,7 +1323,7 @@ function renderAllTasks() {
               ${dueBadge}
               <div style="font-size:12px;color:var(--text3);margin-top:2px;">${taskEstimate(t)}分</div>
             </div>
-            <div class="drag-handle" onclick="event.stopPropagation()">⠿</div>
+            <div class="drag-handle" onclick="event.stopPropagation();openActionSheet('${t.id}')">⠿</div>
           </div>`;
         }).join('')
       : `<div style="padding:10px 0 4px;color:var(--text3);font-size:13px;">タスクなし</div>`;
@@ -1335,9 +1335,6 @@ function renderAllTasks() {
   el.innerHTML = `<div style="padding-bottom:40px;">${html}</div>`;
   addDragListeners();
 }
-
-// ─── DRAG TO REPRIORITIZE ─────────────────────────────────────────
-let drag = null; // { id, ghost, offsetY }
 
 // ─── DELETE MODE ──────────────────────────────────────────────────
 let deleteMode = false;
@@ -1412,23 +1409,7 @@ function getTargetUrgency(touchY) {
   return 'want';
 }
 
-function addDragListeners() {
-  // ⠿ ドラッグで優先度変更
-  document.querySelectorAll('#allTasksScroll .drag-handle').forEach(handle => {
-    const card = handle.closest('.all-task-card');
-    handle.addEventListener('touchstart', e => {
-      e.preventDefault();
-      startDrag(card, e.touches[0]);
-    }, { passive: false });
-    handle.addEventListener('touchmove', e => {
-      e.preventDefault();
-      if (drag) moveDrag(e.touches[0]);
-    }, { passive: false });
-    handle.addEventListener('touchend', e => {
-      if (drag) endDrag(e.changedTouches[0]);
-    });
-  });
-}
+function addDragListeners() {} // ドラッグ廃止・⠿タップでアクションシートを開く
 
 let actionTaskId = null;
 
@@ -1468,70 +1449,6 @@ function actionSetUrgency(urgency) {
   save(); renderMain(); renderAllTasks();
   closeActionSheet();
   toast('優先度を変更しました');
-}
-
-function addDragListeners() {
-  document.querySelectorAll('#allTasksScroll .drag-handle').forEach(handle => {
-    const card = handle.closest('.all-task-card');
-
-    handle.addEventListener('touchstart', e => {
-      e.preventDefault();
-      startDrag(card, e.touches[0]);
-    }, { passive: false });
-
-    handle.addEventListener('touchmove', e => {
-      e.preventDefault();
-      if (drag) moveDrag(e.touches[0]);
-    }, { passive: false });
-
-    handle.addEventListener('touchend', e => {
-      if (drag) endDrag(e.changedTouches[0]);
-    });
-  });
-}
-
-
-
-function startDrag(card, touch) {
-  const rect = card.getBoundingClientRect();
-  const ghost = document.createElement('div');
-  ghost.className = 'drag-ghost';
-  ghost.style.cssText = `width:${rect.width}px;left:${rect.left}px;top:${rect.top}px;`;
-  ghost.innerHTML = card.innerHTML;
-  ghost.style.background = 'var(--card)';
-  ghost.style.padding = '14px 14px 14px 18px';
-  ghost.style.display = 'flex';
-  ghost.style.alignItems = 'center';
-  ghost.style.borderLeft = `4px solid ${card.dataset.urgency === 'must' ? 'var(--must)' : '#ddd'}`;
-  document.body.appendChild(ghost);
-  card.style.opacity = '0.3';
-  drag = { id: card.dataset.id, ghost, card, offsetY: touch.clientY - rect.top };
-}
-
-function moveDrag(touch) {
-  if (!drag) return;
-  drag.ghost.style.top = (touch.clientY - drag.offsetY) + 'px';
-  const target = getTargetUrgency(touch.clientY);
-  document.querySelectorAll('#allTasksScroll .urgency-section').forEach(sec => {
-    sec.classList.toggle('drag-over', sec.dataset.urgency === target);
-  });
-}
-
-function endDrag(touch) {
-  if (!drag) return;
-  drag.ghost.remove();
-  drag.card.style.opacity = '';
-  document.querySelectorAll('#allTasksScroll .urgency-section').forEach(sec => sec.classList.remove('drag-over'));
-  const targetUrgency = getTargetUrgency(touch.clientY);
-  if (targetUrgency) {
-    const t = tasks.find(t => t.id === drag.id);
-    if (t && t.urgency !== targetUrgency) {
-      t.urgency = targetUrgency;
-      save(); renderMain(); renderAllTasks();
-      toast('優先度を変更しました');
-    }
-  }
-  drag = null;
 }
 
 // ─── EDIT SCREEN ─────────────────────────────────────────────────
