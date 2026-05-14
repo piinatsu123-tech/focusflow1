@@ -413,15 +413,6 @@ body {
   user-select: none; -webkit-user-select: none;
 }
 .all-task-card[data-urgency="must"] { border-left-color: var(--must); }
-.delete-mode .all-task-card {
-  border-left-color: #e74c3c;
-  transition: transform .25s ease;
-}
-.delete-mode-bar {
-  display: flex; align-items: center; gap: 8px;
-  padding: 6px 20px 0;
-  font-size: 13px; font-weight: 700; color: #e74c3c;
-}
 .section-cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
 .drag-handle {
   font-size: 22px; color: var(--text3);
@@ -670,11 +661,7 @@ body {
 
   <!-- ALL TAB -->
   <div class="tab-content" id="tab-all">
-    <div style="display:flex;justify-content:flex-end;padding:8px 20px 0;">
-      <button id="deleteModeBtn" onclick="toggleDeleteMode()"
-        style="border:none;background:none;font-size:20px;cursor:pointer;padding:4px 8px;border-radius:8px;color:var(--text3);transition:all .15s;">🗑</button>
-    </div>
-    <div id="timelineContainer" style="padding: 4px 20px 0; display:none;"></div>
+    <div id="timelineContainer" style="padding: 12px 20px 0; display:none;"></div>
     <div class="scroll" id="allTasksScroll"></div>
   </div>
 </div>
@@ -818,7 +805,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v3.4';
+const APP_VERSION = 'v3.5';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1217,7 +1204,6 @@ function updateTimerUI() {
 let currentTab = 'home';
 
 function switchTab(tab) {
-  if (deleteMode) { deleteMode = false; }
   currentTab = tab;
   document.getElementById('tab-home').classList.toggle('visible', tab === 'home');
   document.getElementById('tab-all').classList.toggle('visible', tab === 'all');
@@ -1307,7 +1293,7 @@ function renderAllTasks() {
           const dueBadge = due
             ? `<div class="due-badge ${due.cls}">${due.label}</div>`
             : '';
-        return `<div class="all-task-card" data-id="${t.id}" data-urgency="${urgency}" onclick="if(!deleteMode)openEditScreen('${t.id}')">
+        return `<div class="all-task-card" data-id="${t.id}" data-urgency="${urgency}" onclick="openEditScreen('${t.id}')">
             <div style="flex:1;min-width:0;">
               <div style="font-size:16px;font-weight:500;color:var(--text);line-height:1.4;word-break:break-word;">${esc(t.title)}</div>
               ${dueBadge}
@@ -1329,47 +1315,45 @@ function renderAllTasks() {
 // ─── DRAG TO REPRIORITIZE ─────────────────────────────────────────
 let drag = null; // { id, ghost, offsetY }
 
-// ─── DELETE MODE ──────────────────────────────────────────────────
-let deleteMode = false;
-
-function toggleDeleteMode() {
-  deleteMode = !deleteMode;
-  const btn = document.getElementById('deleteModeBtn');
-  const scroll = document.getElementById('allTasksScroll');
-  btn.style.color = deleteMode ? '#e74c3c' : 'var(--text3)';
-  btn.style.background = deleteMode ? 'rgba(231,76,60,0.1)' : 'none';
-  scroll.classList.toggle('delete-mode', deleteMode);
-  if (deleteMode) {
-    toast('右スワイプでタスクを削除');
-    addDeleteSwipeListeners();
-  } else {
-    toast('削除モードを終了');
-  }
+// ─── URGENCY ZONE DETECTION ───────────────────────────────────────
+function getTargetUrgency(touchY) {
+  const want = document.querySelector('#allTasksScroll .want-section');
+  const nice = document.querySelector('#allTasksScroll .nice-section');
+  if (!want || !nice) return null;
+  const wantTop = want.getBoundingClientRect().top;
+  const niceTop = nice.getBoundingClientRect().top;
+  if (touchY < wantTop) return 'must';
+  if (touchY >= niceTop) return 'nice';
+  return 'want';
 }
 
-function addDeleteSwipeListeners() {
+function addDragListeners() {
+  // 右スワイプ削除（常時）
   document.querySelectorAll('#allTasksScroll .all-task-card').forEach(card => {
-    if (card.dataset.deleteListened) return;
-    card.dataset.deleteListened = '1';
-    let startX = 0, curX = 0;
+    if (card.dataset.swipeListened) return;
+    card.dataset.swipeListened = '1';
+    let startX = 0, startY = 0, curX = 0, swiping = false;
 
     card.addEventListener('touchstart', e => {
-      if (!deleteMode) return;
       startX = curX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      swiping = false;
       card.style.transition = 'none';
     }, { passive: true });
 
     card.addEventListener('touchmove', e => {
-      if (!deleteMode) return;
       curX = e.touches[0].clientX;
       const dx = curX - startX;
-      if (dx > 0) card.style.transform = `translateX(${Math.min(dx, 120)}px)`;
+      const dy = Math.abs(e.touches[0].clientY - startY);
+      if (dx > 12 && dx > dy) {
+        swiping = true;
+        card.style.transform = `translateX(${Math.min(dx, 120)}px)`;
+      }
     }, { passive: true });
 
-    card.addEventListener('touchend', e => {
-      if (!deleteMode) return;
+    card.addEventListener('touchend', () => {
       const dx = curX - startX;
-      if (dx > 80) {
+      if (swiping && dx > 80) {
         card.style.transition = 'transform .2s ease, opacity .2s ease';
         card.style.transform = 'translateX(110%)';
         card.style.opacity = '0';
@@ -1380,9 +1364,23 @@ function addDeleteSwipeListeners() {
       }
     });
   });
-}
 
-// ─── ACTION SHEET ─────────────────────────────────────────────────
+  // ⠿ ドラッグで優先度変更
+  document.querySelectorAll('#allTasksScroll .drag-handle').forEach(handle => {
+    const card = handle.closest('.all-task-card');
+    handle.addEventListener('touchstart', e => {
+      e.preventDefault();
+      startDrag(card, e.touches[0]);
+    }, { passive: false });
+    handle.addEventListener('touchmove', e => {
+      e.preventDefault();
+      if (drag) moveDrag(e.touches[0]);
+    }, { passive: false });
+    handle.addEventListener('touchend', e => {
+      if (drag) endDrag(e.changedTouches[0]);
+    });
+  });
+}
 let actionTaskId = null;
 
 function openActionSheet(id) {
@@ -1464,9 +1462,9 @@ function startDrag(card, touch) {
 function moveDrag(touch) {
   if (!drag) return;
   drag.ghost.style.top = (touch.clientY - drag.offsetY) + 'px';
+  const target = getTargetUrgency(touch.clientY);
   document.querySelectorAll('#allTasksScroll .urgency-section').forEach(sec => {
-    const r = sec.getBoundingClientRect();
-    sec.classList.toggle('drag-over', touch.clientY >= r.top && touch.clientY <= r.bottom);
+    sec.classList.toggle('drag-over', sec.dataset.urgency === target);
   });
 }
 
@@ -1474,19 +1472,13 @@ function endDrag(touch) {
   if (!drag) return;
   drag.ghost.remove();
   drag.card.style.opacity = '';
-  let targetUrgency = null;
-  document.querySelectorAll('#allTasksScroll .urgency-section').forEach(sec => {
-    sec.classList.remove('drag-over');
-    const r = sec.getBoundingClientRect();
-    if (touch.clientY >= r.top && touch.clientY <= r.bottom) targetUrgency = sec.dataset.urgency;
-  });
+  document.querySelectorAll('#allTasksScroll .urgency-section').forEach(sec => sec.classList.remove('drag-over'));
+  const targetUrgency = getTargetUrgency(touch.clientY);
   if (targetUrgency) {
     const t = tasks.find(t => t.id === drag.id);
     if (t && t.urgency !== targetUrgency) {
       t.urgency = targetUrgency;
-      save();
-      renderMain();
-      renderAllTasks();
+      save(); renderMain(); renderAllTasks();
       toast('優先度を変更しました');
     }
   }
