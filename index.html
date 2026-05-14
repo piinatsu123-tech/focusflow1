@@ -408,11 +408,12 @@ body {
   background: var(--card); border-left: 4px solid #ddd;
   border-radius: 0 12px 12px 0;
   padding: 14px 14px 14px 18px;
-  margin-bottom: 8px; min-height: 58px;
+  margin-bottom: 0; min-height: 58px;
+  position: relative;
   user-select: none; -webkit-user-select: none;
-  touch-action: none;
 }
 .all-task-card[data-urgency="must"] { border-left-color: var(--must); }
+.section-cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
 .drag-ghost {
   position: fixed; pointer-events: none; z-index: 500;
   opacity: 0.88; border-radius: 0 12px 12px 0;
@@ -724,7 +725,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v2.9';
+const APP_VERSION = 'v3.0';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
