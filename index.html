@@ -805,7 +805,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v3.2';
+const APP_VERSION = 'v3.3';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1293,7 +1293,7 @@ function renderAllTasks() {
           const dueBadge = due
             ? `<div class="due-badge ${due.cls}">${due.label}</div>`
             : '';
-        return `<div class="all-task-card" data-id="${t.id}" data-urgency="${urgency}" onclick="openActionSheet('${t.id}')">
+        return `<div class="all-task-card" data-id="${t.id}" data-urgency="${urgency}" onclick="openEditScreen('${t.id}')">
             <div style="flex:1;min-width:0;">
               <div style="font-size:16px;font-weight:500;color:var(--text);line-height:1.4;word-break:break-word;">${esc(t.title)}</div>
               ${dueBadge}
