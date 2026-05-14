@@ -665,11 +665,11 @@ body {
 
   <!-- ALL TAB -->
   <div class="tab-content" id="tab-all">
-    <div style="display:flex;justify-content:flex-end;padding:8px 20px 0;">
+    <div id="timelineContainer" style="padding: 12px 20px 0; display:none;"></div>
+    <div style="display:flex;justify-content:flex-end;padding:8px 20px 4px;">
       <button id="deleteModeBtn" onclick="toggleDeleteMode()"
         style="border:1.5px solid var(--border-strong);background:none;font-size:14px;font-weight:700;cursor:pointer;padding:4px 12px;border-radius:50px;color:var(--text3);font-family:'Noto Sans JP',sans-serif;transition:all .15s;">🗑 削除</button>
     </div>
-    <div id="timelineContainer" style="padding: 4px 20px 0; display:none;"></div>
     <div class="scroll" id="allTasksScroll"></div>
   </div>
 </div>
@@ -813,7 +813,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v3.8';
+const APP_VERSION = 'v3.9';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1236,8 +1236,6 @@ function formatDueDate(dateStr) {
   const label = `${due.getMonth()+1}/${due.getDate()}（${days[due.getDay()]}）`;
   if (diffDays < 0) return { label: `${label} 期限切れ`, cls: 'overdue' };
   if (diffDays === 0) return { label: `今日まで`, cls: 'overdue' };
-  if (diffDays === 1) return { label: `明日まで`, cls: 'soon' };
-  if (diffDays <= 3) return { label: `${label}まで`, cls: 'soon' };
   return { label: `${label}まで`, cls: 'normal' };
 }
 
@@ -1262,31 +1260,33 @@ function renderTimeline() {
   const maxDay = Math.max(14, ...dayVals) + 2;
   const range  = maxDay - minDay;
 
-  const W = 320, padL = 20, padR = 20, lineW = W - padL - padR, lineY = 32;
+  const W = 320, padL = 24, padR = 24, lineW = W - padL - padR;
+  const lineY = 44;
+  const H = 90;
   const xOf = d => padL + ((d - minDay) / range) * lineW;
   const todayX = xOf(0);
 
-  const markers = Object.entries(groups).map(([dateStr, g]) => {
+  const markers = Object.entries(groups).map(([, g]) => {
     const x = xOf(g.days);
-    const dObj = new Date(dateStr);
-    const lbl = `${dObj.getMonth()+1}/${dObj.getDate()}`;
-    const color = g.days < 0 ? '#e74c3c'
-      : g.hasMust ? '#e74c3c'
-      : g.days <= 3 ? '#e67e22'
-      : '#999';
-    const r = Math.max(4, Math.min(10, 4 + g.count));
-    const showDate = g.days !== 0;
+    const isOverdue = g.days < 0;
+    const color = (isOverdue || g.hasMust) ? '#e74c3c' : '#aaa';
+    const r = Math.max(9, Math.min(16, 9 + g.count - 1));
+    const showLabel = g.days !== 0;
+    const daysLabel = isOverdue
+      ? `期限切れ`
+      : g.days === 1 ? `1日` : `${g.days}日`;
     return `
       <circle cx="${x}" cy="${lineY}" r="${r}" fill="${color}"/>
-      <text x="${x}" y="${lineY+1}" text-anchor="middle" dominant-baseline="middle" font-size="${r < 7 ? 8 : 10}" fill="white" font-weight="700">${g.count}</text>
-      ${showDate ? `<text x="${x}" y="${lineY+r+10}" text-anchor="middle" font-size="10" fill="${color}">${lbl}</text>` : ''}`;
+      <text x="${x}" y="${lineY}" text-anchor="middle" dominant-baseline="middle"
+        font-size="${r >= 12 ? 12 : 10}" fill="white" font-weight="700">${g.count}</text>
+      ${showLabel ? `<text x="${x}" y="${lineY + r + 14}" text-anchor="middle" font-size="13" fill="${color}" font-weight="500">あと${daysLabel}</text>` : ''}`;
   }).join('');
 
   container.innerHTML = `
-    <svg viewBox="0 0 ${W} 54" width="100%" style="overflow:visible;display:block;">
-      <line x1="${padL}" y1="${lineY}" x2="${W-padR}" y2="${lineY}" stroke="var(--border-strong)" stroke-width="1.5"/>
-      <circle cx="${todayX}" cy="${lineY}" r="4" fill="var(--text)"/>
-      <text x="${todayX}" y="${lineY+16}" text-anchor="middle" font-size="10" fill="var(--text2)">今日</text>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" style="overflow:visible;display:block;">
+      <line x1="${padL}" y1="${lineY}" x2="${W-padR}" y2="${lineY}" stroke="var(--border-strong)" stroke-width="2"/>
+      <circle cx="${todayX}" cy="${lineY}" r="5" fill="var(--text)"/>
+      <text x="${todayX}" y="${lineY + 19}" text-anchor="middle" font-size="13" fill="var(--text2)" font-weight="500">今日</text>
       ${markers}
     </svg>`;
 }
