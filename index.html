@@ -559,6 +559,7 @@ body {
   background: var(--card); border-radius: 12px;
   padding: 14px 16px; cursor: pointer;
   touch-action: pan-y;
+  position: relative;
 }
 .step-list-card-text { flex: 1; font-size: 16px; color: var(--text); line-height: 1.4; }
 .step-list-card-meta { font-size: 13px; color: var(--text3); white-space: nowrap; }
@@ -813,7 +814,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v4.4';
+const APP_VERSION = 'v4.5';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1478,41 +1479,44 @@ function renderEditSteps(steps) {
   el.innerHTML = steps.map((s, i) => {
     const text = stepLabel(s) || '（未入力）';
     const mins = stepMinutes(s);
-    return `<div class="step-list-card" data-step-idx="${i}" onclick="openStepDetail(${i})">
-      <div class="step-list-card-text">${esc(text)}</div>
-      ${mins ? `<div class="step-list-card-meta">${mins}分</div>` : ''}
-      <div class="step-list-card-arrow">›</div>
+    return `<div class="swipe-container" data-step-idx="${i}">
+      <div class="delete-bg">削除</div>
+      <div class="step-list-card" onclick="openStepDetail(${i})">
+        <div class="step-list-card-text">${esc(text)}</div>
+        ${mins ? `<div class="step-list-card-meta">${mins}分</div>` : ''}
+        <div class="step-list-card-arrow">›</div>
+      </div>
     </div>`;
   }).join('');
   addStepSwipeListeners();
 }
 
 function addStepSwipeListeners() {
-  document.querySelectorAll('#stepEditList .step-list-card').forEach(card => {
+  document.querySelectorAll('#stepEditList .swipe-container').forEach(container => {
+    const card = container.querySelector('.step-list-card');
     let startX = 0, startY = 0, curX = 0, swiping = false;
-    card.addEventListener('touchstart', e => {
+    container.addEventListener('touchstart', e => {
       startX = curX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
       swiping = false;
       card.style.transition = 'none';
     }, { passive: true });
-    card.addEventListener('touchmove', e => {
+    container.addEventListener('touchmove', e => {
       curX = e.touches[0].clientX;
       const dx = curX - startX;
       const dy = Math.abs(e.touches[0].clientY - startY);
-      if (dx > 10 && dx > dy) {
+      if (dx < -10 && Math.abs(dx) > dy) {
         swiping = true;
-        card.style.transform = `translateX(${Math.min(dx, 120)}px)`;
+        card.style.transform = `translateX(${Math.max(dx, -100)}px)`;
       }
     }, { passive: true });
-    card.addEventListener('touchend', () => {
+    container.addEventListener('touchend', () => {
       const dx = curX - startX;
-      if (swiping && dx > 70) {
-        document.addEventListener('click', e => e.stopPropagation(), { capture: true, once: true });
+      if (swiping && dx < -70) {
         card.style.transition = 'transform .2s ease, opacity .2s ease';
-        card.style.transform = 'translateX(110%)';
+        card.style.transform = 'translateX(-100%)';
         card.style.opacity = '0';
-        const idx = parseInt(card.dataset.stepIdx);
+        const idx = parseInt(container.dataset.stepIdx);
         setTimeout(() => deleteEditStep(idx), 210);
       } else {
         card.style.transition = 'transform .3s ease';
