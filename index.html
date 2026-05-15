@@ -814,7 +814,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v4.5';
+const APP_VERSION = 'v4.6';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1085,19 +1085,23 @@ function renderCurrentStep() {
 function showStepList() {
   const t = tasks.find(t => t.id === focusId);
   if (!t || !t.steps) return;
+
   const items = t.steps.map((s, i) => {
-    const done  = typeof s === 'object' ? (s.done || false) : false;
-    const label = stepLabel(s);
-    const mins  = stepMinutes(s);
+    const done   = typeof s === 'object' ? (s.done || false) : false;
+    const label  = stepLabel(s);
+    const mins   = stepMinutes(s);
     const minsStr = mins > 0 ? `<span style="font-size:12px;color:var(--text3);margin-left:6px;">${mins}分</span>` : '';
-    return `<div class="step-list-item${done ? ' done' : ''}"
-      style="cursor:pointer;"
-      onclick="document.querySelector('.step-list-overlay').remove();openStepDetailFrom('${t.id}',${i})">
-      <div class="step-list-check">${done ? '✓' : ''}</div>
-      <div class="step-list-label" style="flex:1;">${esc(label)}${minsStr}</div>
-      <div style="font-size:18px;color:var(--text3);padding-left:8px;">›</div>
+    return `<div class="swipe-container" data-step-idx="${i}" style="margin-bottom:0;border-radius:0;overflow:hidden;">
+      <div class="delete-bg" style="border-radius:0;">削除</div>
+      <div class="step-list-item${done ? ' done' : ''}" style="cursor:pointer;position:relative;"
+        onclick="document.querySelector('.step-list-overlay').remove();openStepDetailFrom('${t.id}',${i})">
+        <div class="step-list-check">${done ? '✓' : ''}</div>
+        <div class="step-list-label" style="flex:1;">${esc(label)}${minsStr}</div>
+        <div style="font-size:18px;color:var(--text3);padding-left:8px;">›</div>
+      </div>
     </div>`;
   }).join('');
+
   const overlay = document.createElement('div');
   overlay.className = 'step-list-overlay';
   overlay.innerHTML = `<div class="step-list-sheet">
@@ -1108,10 +1112,47 @@ function showStepList() {
     </div>
     ${items}
   </div>`;
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) overlay.remove();
-  });
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   document.body.appendChild(overlay);
+
+  // スワイプ削除リスナー
+  overlay.querySelectorAll('.swipe-container').forEach(container => {
+    const card = container.querySelector('.step-list-item');
+    let startX = 0, startY = 0, curX = 0, swiping = false;
+    container.addEventListener('touchstart', e => {
+      startX = curX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      swiping = false;
+      card.style.transition = 'none';
+    }, { passive: true });
+    container.addEventListener('touchmove', e => {
+      curX = e.touches[0].clientX;
+      const dx = curX - startX;
+      const dy = Math.abs(e.touches[0].clientY - startY);
+      if (dx < -10 && Math.abs(dx) > dy) {
+        swiping = true;
+        card.style.transform = `translateX(${Math.max(dx, -100)}px)`;
+      }
+    }, { passive: true });
+    container.addEventListener('touchend', () => {
+      const dx = curX - startX;
+      if (swiping && dx < -70) {
+        card.style.transition = 'transform .2s ease, opacity .2s ease';
+        card.style.transform = 'translateX(-100%)';
+        card.style.opacity = '0';
+        const idx = parseInt(container.dataset.stepIdx);
+        setTimeout(() => {
+          const task = tasks.find(t => t.id === focusId);
+          if (task) { task.steps.splice(idx, 1); save(); }
+          overlay.remove();
+          showStepList();
+        }, 210);
+      } else {
+        card.style.transition = 'transform .3s ease';
+        card.style.transform = 'translateX(0)';
+      }
+    });
+  });
 }
 
 function startStep() {
