@@ -671,8 +671,6 @@ body {
       </div>
     </div>
     <div class="import-wrap" style="gap:8px;">
-      <button class="import-btn" onclick="importFromClipboard()">クリップボードからインポート</button>
-    </div>
     <div class="scroll">
       <div class="group-rows" id="mainGroups"></div>
     </div>
@@ -832,7 +830,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v5.0';
+const APP_VERSION = 'v5.1';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -887,8 +885,9 @@ function toast(msg) {
 
 // ─── TIME BAR ────────────────────────────────────────────────────
 function calcTimeBar() {
-  const totalMin = tasks.reduce((s, t) => s + taskEstimate(t), 0);
-  const remMin   = tasks.filter(t => !t.done).reduce((s, t) => s + taskEstimate(t), 0);
+  const active = t => t.urgency !== 'scheduled';
+  const totalMin = tasks.filter(active).reduce((s, t) => s + taskEstimate(t), 0);
+  const remMin   = tasks.filter(t => !t.done && active(t)).reduce((s, t) => s + taskEstimate(t), 0);
   const doneMin  = totalMin - remMin;
   document.getElementById('timeBarRemaining').textContent = (remMin / 60).toFixed(1);
   document.getElementById('timeBarTotal').textContent     = '/ ' + (totalMin / 60).toFixed(1) + 'h';
