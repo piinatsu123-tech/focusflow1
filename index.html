@@ -164,6 +164,8 @@ body {
   color: var(--text); letter-spacing: -0.3px; line-height: 1.2;
 }
 .gr-title.must-color { color: var(--must); }
+.gr-title.scheduled-color { color: #5b9bd5; }
+.gr-count.scheduled-color { color: #5b9bd5; }
 .group-row.zero .gr-title { color: var(--text3); }
 
 .gr-est { font-size: 13px; color: var(--text2); margin-top: 3px; }
@@ -220,6 +222,7 @@ body {
   z-index: 1;
 }
 .task-card[data-urgency="must"] { border-left-color: var(--must); }
+.task-card[data-urgency="scheduled"] { border-left-color: #5b9bd5; }
 .task-card.done-card { opacity: 0.5; border-left-color: #dddddd; }
 .task-card-body { flex: 1; min-width: 0; }
 .task-card-title {
@@ -606,9 +609,9 @@ body {
 }
 .action-btn:active { background: var(--card); }
 .action-btn.danger { color: #e74c3c; }
-.action-urgency-row { display: flex; gap: 6px; padding: 4px 0 12px; }
+.action-urgency-row { display: flex; gap: 6px; padding: 4px 0 6px; flex-wrap: wrap; }
 .action-urgency-btn {
-  flex: 1; height: 40px; border-radius: 50px;
+  flex: 1; min-width: calc(50% - 4px); height: 40px; border-radius: 50px;
   border: 1.5px solid var(--border-strong);
   background: none; cursor: pointer;
   font-family: 'Noto Sans JP', sans-serif;
@@ -617,6 +620,7 @@ body {
 .action-urgency-btn.cur-must { background: var(--must); border-color: var(--must); color: #fff; }
 .action-urgency-btn.cur-want { background: var(--text); border-color: var(--text); color: var(--bg); }
 .action-urgency-btn.cur-nice { background: var(--text2); border-color: var(--text2); color: var(--bg); }
+.action-urgency-btn.cur-scheduled { background: #5b9bd5; border-color: #5b9bd5; color: #fff; }
 .action-cancel {
   width: 100%; height: 54px; margin-top: 8px;
   background: var(--card); border-radius: 14px;
@@ -754,6 +758,7 @@ body {
       <button class="action-urgency-btn" id="aub-must" onclick="actionSetUrgency('must')">今日中に絶対</button>
       <button class="action-urgency-btn" id="aub-want" onclick="actionSetUrgency('want')">できたら</button>
       <button class="action-urgency-btn" id="aub-nice" onclick="actionSetUrgency('nice')">余力があれば</button>
+      <button class="action-urgency-btn" id="aub-scheduled" onclick="actionSetUrgency('scheduled')">後日実行予定</button>
     </div>
     <button class="action-btn danger" onclick="actionDelete()">🗑 削除</button>
     <button class="action-cancel" onclick="closeActionSheet()">キャンセル</button>
@@ -774,6 +779,10 @@ body {
     <div class="edit-section" style="margin-top:16px;">
       <div class="edit-section-label">期日（任意）</div>
       <input class="edit-due-input" id="editDueDate" type="date">
+    </div>
+    <div class="edit-section" style="margin-top:16px;">
+      <div class="edit-section-label">実行日（後日実行予定の場合）</div>
+      <input class="edit-due-input" id="editScheduledDate" type="date">
     </div>
     <div class="edit-section" style="margin-top:20px;">
       <div class="edit-section-label">ステップ</div>
@@ -823,7 +832,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v4.8';
+const APP_VERSION = 'v4.9';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -865,6 +874,7 @@ const GROUP_CONFIG = [
   { urgency: 'must', title: '今日中に絶対' },
   { urgency: 'want', title: 'できたらやりたい' },
   { urgency: 'nice', title: '余力があれば' },
+  { urgency: 'scheduled', title: '後日実行予定' },
 ];
 
 // ─── TOAST ───────────────────────────────────────────────────────
@@ -888,6 +898,7 @@ function calcTimeBar() {
 
 // ─── MAIN SCREEN ─────────────────────────────────────────────────
 function renderMain() {
+  autoPromoteScheduled();
   document.getElementById('dateBadge').textContent =
     new Date().toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', weekday: 'short' });
   document.getElementById('versionBadge').textContent = APP_VERSION;
@@ -911,16 +922,17 @@ function renderMain() {
       : '';
     const zeroClass  = count === 0 ? ' zero' : '';
     const mustClass  = urgency === 'must' && count > 0 ? ' must-color' : '';
+    const scheduledClass = urgency === 'scheduled' && count > 0 ? ' scheduled-color' : '';
     const clickAttr  = count > 0 ? `onclick="showGroup('${urgency}')"` : '';
 
     html += `
     <div class="group-row${zeroClass}" ${clickAttr}>
       <div class="gr-label">
-        <div class="gr-title${mustClass}">${title}</div>
+        <div class="gr-title${mustClass}${scheduledClass}">${title}</div>
         ${estStr ? `<div class="gr-est">${estStr}</div>` : ''}
       </div>
       <div class="gr-right">
-        <div class="gr-count${mustClass}">${count}</div>
+        <div class="gr-count${mustClass}${scheduledClass}">${count}</div>
         <div class="gr-unit">件</div>
       </div>
       ${count > 0 ? '<div class="gr-arrow">›</div>' : ''}
@@ -931,6 +943,17 @@ function renderMain() {
 }
 
 // ─── GROUP DETAIL ─────────────────────────────────────────────────
+function autoPromoteScheduled() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  let promoted = 0;
+  tasks.forEach(t => {
+    if (t.urgency === 'scheduled' && t.scheduledDate) {
+      const d = new Date(t.scheduledDate + 'T00:00:00');
+      if (d <= today) { t.urgency = 'must'; promoted++; }
+    }
+  });
+  if (promoted) { save(); if (promoted > 0) toast(`${promoted}件のタスクを「今日中に絶対」に移動しました`); }
+}
 function showGroup(urgency) {
   currentUrgency = urgency;
   const cfg = GROUP_CONFIG.find(g => g.urgency === urgency);
@@ -947,11 +970,13 @@ function showGroup(urgency) {
 }
 
 function renderGroupList() {
-  const undone = tasks.filter(t => !t.done && t.urgency === currentUrgency);
-  const done   = tasks.filter(t =>  t.done && t.urgency === currentUrgency);
-  const list   = [...undone, ...done];
-  const el     = document.getElementById('groupTaskList');
-
+  let undone = tasks.filter(t => !t.done && t.urgency === currentUrgency);
+  const done = tasks.filter(t =>  t.done && t.urgency === currentUrgency);
+  if (currentUrgency === 'scheduled') {
+    undone = undone.sort((a, b) => (a.scheduledDate || '') < (b.scheduledDate || '') ? -1 : 1);
+  }
+  const list = [...undone, ...done];
+  const el   = document.getElementById('groupTaskList');
   if (!list.length) {
     el.innerHTML = `<div class="empty-state"><p>タスクがありません</p></div>`;
     return;
@@ -960,14 +985,25 @@ function renderGroupList() {
   addSwipeListeners();
 }
 
+function formatScheduledDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  const days = ['日','月','火','水','木','金','土'];
+  return `${d.getMonth()+1}/${d.getDate()}（${days[d.getDay()]}）に実行予定`;
+}
+
 function taskCardHTML(t) {
   const doneClass = t.done ? ' done-card' : '';
   const bodyClick = t.done ? '' : `onclick="selectTask('${t.id}')"`;
+  const scheduledStr = (t.urgency === 'scheduled' && t.scheduledDate)
+    ? `<div style="font-size:12px;color:#5b9bd5;margin-top:2px;">${formatScheduledDate(t.scheduledDate)}</div>`
+    : '';
   return `<div class="swipe-container" data-id="${t.id}">
     <div class="delete-bg">削除</div>
     <div class="task-card${doneClass}" data-urgency="${t.urgency || 'want'}">
       <div class="task-card-body" ${bodyClick} style="flex:1;min-width:0;cursor:${t.done ? 'default' : 'pointer'};">
         <div class="task-card-title">${esc(t.title)}</div>
+        ${scheduledStr}
         <div class="task-card-meta">${taskEstimate(t)}分</div>
       </div>
       <button class="check-btn" onclick="toggleDone('${t.id}')">${t.done ? '✓' : ''}</button>
@@ -1281,7 +1317,7 @@ function switchTab(tab) {
 }
 
 // ─── ALL TASKS VIEW ───────────────────────────────────────────────
-const URGENCY_LABELS = { must: '今日中に絶対', want: 'できたらやりたい', nice: '余力があれば' };
+const URGENCY_LABELS = { must: '今日中に絶対', want: 'できたらやりたい', nice: '余力があれば', scheduled: '後日実行予定' };
 
 function formatDueDate(dateStr) {
   if (!dateStr) return null;
@@ -1360,7 +1396,7 @@ function renderTimeline() {
 function renderAllTasks() {
   renderTimeline();
   const el = document.getElementById('allTasksScroll');
-  const html = ['must','want','nice'].map(urgency => {
+  const html = ['must','want','nice','scheduled'].map(urgency => {
     const list = tasks.filter(t => !t.done && t.urgency === urgency);
     const cards = list.length
       ? list.map(t => {
@@ -1368,10 +1404,14 @@ function renderAllTasks() {
           const dueBadge = due
             ? `<div class="due-badge ${due.cls}">${due.label}</div>`
             : '';
+          const scheduledBadge = (urgency === 'scheduled' && t.scheduledDate)
+            ? `<div style="font-size:13px;color:#5b9bd5;margin-top:2px;">${formatScheduledDate(t.scheduledDate)}</div>`
+            : '';
         return `<div class="all-task-card" data-id="${t.id}" data-urgency="${urgency}" onclick="if(!deleteMode)openEditScreen('${t.id}')">
             <div style="flex:1;min-width:0;">
               <div style="font-size:16px;font-weight:500;color:var(--text);line-height:1.4;word-break:break-word;">${esc(t.title)}</div>
               ${dueBadge}
+              ${scheduledBadge}
               <div style="font-size:12px;color:var(--text3);margin-top:2px;">${taskEstimate(t)}分</div>
             </div>
             <div class="drag-handle" onclick="event.stopPropagation();openActionSheet('${t.id}')">⠿</div>
@@ -1469,9 +1509,9 @@ function openActionSheet(id) {
   const t = tasks.find(t => t.id === id);
   if (!t) return;
   document.getElementById('actionTitle').textContent = t.title;
-  ['must','want','nice'].forEach(u => {
+  ['must','want','nice','scheduled'].forEach(u => {
     const btn = document.getElementById('aub-' + u);
-    btn.className = 'action-urgency-btn' + (t.urgency === u ? ' cur-' + u : '');
+    if (btn) btn.className = 'action-urgency-btn' + (t.urgency === u ? ' cur-' + u : '');
   });
   document.getElementById('actionOverlay').classList.add('open');
 }
@@ -1511,6 +1551,7 @@ function openEditScreen(id) {
   if (!t) return;
   document.getElementById('editTaskTitle').value = t.title || '';
   document.getElementById('editDueDate').value = t.dueDate || '';
+  document.getElementById('editScheduledDate').value = t.scheduledDate || '';
   renderEditSteps(t.steps || []);
   document.getElementById('screen-edit').classList.add('visible');
 }
@@ -1656,6 +1697,17 @@ function saveEdit() {
   if (newTitle) t.title = newTitle;
   const newDue = document.getElementById('editDueDate').value;
   if (newDue) t.dueDate = newDue; else delete t.dueDate;
+  const newScheduled = document.getElementById('editScheduledDate').value;
+  if (newScheduled) {
+    t.scheduledDate = newScheduled;
+    // 実行日が未来なら自動的に「後日実行予定」に
+    const today = new Date(); today.setHours(0,0,0,0);
+    const d = new Date(newScheduled + 'T00:00:00');
+    if (d > today && t.urgency !== 'scheduled') t.urgency = 'scheduled';
+  } else {
+    delete t.scheduledDate;
+    if (t.urgency === 'scheduled') t.urgency = 'want';
+  }
   t.estimate = t.steps.reduce((sum, s) => sum + (s.estimatedMinutes || 0), 0) || t.estimate;
   save();
   renderMain();
