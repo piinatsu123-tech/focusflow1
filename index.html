@@ -273,8 +273,13 @@ body {
 .step-list-item {
   display: flex; align-items: center; gap: 12px;
   padding: 12px 0; border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  position: relative; z-index: 1;
 }
 .step-list-item:last-child { border-bottom: none; }
+.swipe-container .step-list-card {
+  border-radius: 0 12px 12px 0;
+}
 .step-list-check {
   width: 24px; height: 24px; flex-shrink: 0;
   border-radius: 50%; border: 2px solid var(--border-strong);
@@ -818,7 +823,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v4.7';
+const APP_VERSION = 'v4.8';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1097,7 +1102,7 @@ function showStepList() {
     const minsStr = mins > 0 ? `<span style="font-size:12px;color:var(--text3);margin-left:6px;">${mins}分</span>` : '';
     return `<div class="swipe-container" data-step-idx="${i}" style="margin-bottom:0;border-radius:0;overflow:hidden;">
       <div class="delete-bg" style="border-radius:0;">削除</div>
-      <div class="step-list-item${done ? ' done' : ''}" style="cursor:pointer;position:relative;z-index:1;"
+      <div class="step-list-item${done ? ' done' : ''}" style="cursor:pointer;padding:12px 4px 12px 0;"
         onclick="document.querySelector('.step-list-overlay').remove();openStepDetailFrom('${t.id}',${i})">
         <div class="step-list-check">${done ? '✓' : ''}</div>
         <div class="step-list-label" style="flex:1;">${esc(label)}${minsStr}</div>
