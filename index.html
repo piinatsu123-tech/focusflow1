@@ -832,7 +832,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v4.9';
+const APP_VERSION = 'v5.0';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -1747,7 +1747,10 @@ function normalizeQuotes(text) {
 }
 
 // LINEボットから自動取り込む
+let isImporting = false;
 async function importFromLine() {
+  if (isImporting) return;
+  isImporting = true;
   try {
     const res = await fetch('https://divine-wildflower-8952.piinatsu123.workers.dev/tasks');
     const newTasks = await res.json();
@@ -1760,14 +1763,16 @@ async function importFromLine() {
       const urgency = t.urgency || 'want';
       const fromSteps = steps.reduce((sum, s) => sum + (s.estimatedMinutes || 0), 0);
       const estimate = fromSteps > 0 ? fromSteps : (t.estimate || 30);
-      const { id, ...rest } = t; // IDは捨てて uid() で新規発行
+      const { id, ...rest } = t;
       addTask({ ...rest, urgency, estimate, steps, done: false });
     });
     await fetch('https://divine-wildflower-8952.piinatsu123.workers.dev/tasks', { method: 'DELETE' });
     renderMain();
     toast('✓ ' + newTasks.length + '件のタスクをLINEから取り込みました');
   } catch (e) {
-    // サイレントに失敗（自動実行なのでエラー表示しない）
+    // サイレントに失敗
+  } finally {
+    isImporting = false;
   }
 }
 
