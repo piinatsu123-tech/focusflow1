@@ -164,8 +164,8 @@ body {
   color: var(--text); letter-spacing: -0.3px; line-height: 1.2;
 }
 .gr-title.must-color { color: var(--must); }
-.gr-title.scheduled-color { color: #5b9bd5; }
-.gr-count.scheduled-color { color: #5b9bd5; }
+.gr-title.scheduled-color { color: var(--text2); }
+.gr-count.scheduled-color { color: var(--text2); }
 .group-row.zero .gr-title { color: var(--text3); }
 
 .gr-est { font-size: 13px; color: var(--text2); margin-top: 3px; }
@@ -222,7 +222,7 @@ body {
   z-index: 1;
 }
 .task-card[data-urgency="must"] { border-left-color: var(--must); }
-.task-card[data-urgency="scheduled"] { border-left-color: #5b9bd5; }
+.task-card[data-urgency="scheduled"] { border-left-color: var(--text2); }
 .task-card.done-card { opacity: 0.5; border-left-color: #dddddd; }
 .task-card-body { flex: 1; min-width: 0; }
 .task-card-title {
@@ -620,7 +620,7 @@ body {
 .action-urgency-btn.cur-must { background: var(--must); border-color: var(--must); color: #fff; }
 .action-urgency-btn.cur-want { background: var(--text); border-color: var(--text); color: var(--bg); }
 .action-urgency-btn.cur-nice { background: var(--text2); border-color: var(--text2); color: var(--bg); }
-.action-urgency-btn.cur-scheduled { background: #5b9bd5; border-color: #5b9bd5; color: #fff; }
+.action-urgency-btn.cur-scheduled { background: var(--text2); border-color: var(--text2); color: var(--bg); }
 .action-cancel {
   width: 100%; height: 54px; margin-top: 8px;
   background: var(--card); border-radius: 14px;
@@ -829,7 +829,7 @@ function migrateTasks(list) {
 }
 
 // ─── VERSION ─────────────────────────────────────────────────────
-const APP_VERSION = 'v5.1';
+const APP_VERSION = 'v5.2';
 
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = migrateTasks(JSON.parse(localStorage.getItem('ff-tasks') || '[]'));
@@ -994,7 +994,7 @@ function taskCardHTML(t) {
   const doneClass = t.done ? ' done-card' : '';
   const bodyClick = t.done ? '' : `onclick="selectTask('${t.id}')"`;
   const scheduledStr = (t.urgency === 'scheduled' && t.scheduledDate)
-    ? `<div style="font-size:12px;color:#5b9bd5;margin-top:2px;">${formatScheduledDate(t.scheduledDate)}</div>`
+    ? `<div style="font-size:12px;color:var(--text2);margin-top:2px;">${formatScheduledDate(t.scheduledDate)}</div>`
     : '';
   return `<div class="swipe-container" data-id="${t.id}">
     <div class="delete-bg">削除</div>
@@ -1403,7 +1403,7 @@ function renderAllTasks() {
             ? `<div class="due-badge ${due.cls}">${due.label}</div>`
             : '';
           const scheduledBadge = (urgency === 'scheduled' && t.scheduledDate)
-            ? `<div style="font-size:13px;color:#5b9bd5;margin-top:2px;">${formatScheduledDate(t.scheduledDate)}</div>`
+            ? `<div style="font-size:13px;color:var(--text2);margin-top:2px;">${formatScheduledDate(t.scheduledDate)}</div>`
             : '';
         return `<div class="all-task-card" data-id="${t.id}" data-urgency="${urgency}" onclick="if(!deleteMode)openEditScreen('${t.id}')">
             <div style="flex:1;min-width:0;">
